@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ObraDocs — Agente de Viabilidad</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root {
+  --t9:#1a100a; --t8:#2d1c12; --t7:#4a2e1e; --t6:#6b4228; --t5:#8b5635;
+  --t4:#a96a42; --t3:#c4845a; --t2:#d9a882; --t1:#ecd3bb; --t0:#faf3eb;
+  --a50:#f5e8d8; --arena:#ddd0bc;
+  --white:#fff; --cream:#fdfaf6;
+  --s5:#1a6b42; --s4:#2d9e62; --s2:#b4f0d0; --s1:#e2f9ee;
+  --r5:#8b2020; --r4:#c43232; --r2:#fdd; --r1:#fff0f0;
+  --w5:#7a5a0a; --w4:#c49a1a; --w2:#fdf0b4; --w1:#fffde8;
+  --b5:#163058; --b4:#245492; --b2:#daeaf8; --b1:#f0f6fd;
+  --text:#1a100a; --body:#4a2e1e; --muted:#9e8870;
+  --radius:12px; --radius-lg:18px; --radius-xl:24px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{font-family:'Outfit',sans-serif;background:var(--cream);color:var(--text);min-height:100vh;}
+
+/* ── NAV ── */
+.nav{
+  position:sticky;top:0;z-index:100;
+  background:rgba(253,250,246,.96);backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--arena);
+  height:64px;display:flex;align-items:center;justify-content:space-between;
+  padding:0 5%;box-shadow:0 1px 16px rgba(42,20,10,.05);
+}
+.nav-logo{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:900;color:var(--t7);}
+.nav-logo span{color:var(--t4);}
+.nav-badge{font-size:.7rem;font-weight:600;padding:4px 10px;border-radius:20px;
+  background:var(--t1);color:var(--t6);border:1px solid var(--t2);}
+
+/* ── LAYOUT ── */
+.app{max-width:1100px;margin:0 auto;padding:36px 24px 60px;}
+
+.app-header{margin-bottom:32px;}
+.app-title{font-family:'Playfair Display',serif;font-size:2rem;font-weight:900;color:var(--t8);line-height:1.15;}
+.app-title em{color:var(--t4);font-style:normal;}
+.app-sub{font-size:.95rem;color:var(--muted);margin-top:8px;line-height:1.6;}
+
+/* ── INPUT TABS ── */
+.input-tabs{display:flex;gap:8px;margin-bottom:24px;}
+.itab{
+  padding:9px 22px;border-radius:30px;font-size:.85rem;font-weight:500;
+  border:1px solid var(--arena);background:var(--white);color:var(--body);
+  cursor:pointer;transition:all .18s;display:flex;align-items:center;gap:7px;
+}
+.itab.active{background:var(--t7);color:#fff;border-color:var(--t7);}
+.itab:hover:not(.active){border-color:var(--t4);color:var(--t6);}
+
+.input-panel{display:none;} .input-panel.active{display:block;}
+
+/* ── FORM ── */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.form-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+.form-full{grid-column:1/-1;}
+
+.form-section{
+  background:var(--white);border:1px solid var(--arena);border-radius:var(--radius-lg);
+  padding:22px 24px;margin-bottom:16px;
+}
+.section-label{
+  font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--t5);margin-bottom:16px;display:flex;align-items:center;gap:8px;
+}
+.section-label::after{content:'';flex:1;height:1px;background:var(--arena);}
+
+.fgroup{display:flex;flex-direction:column;gap:5px;}
+.flabel{font-size:.78rem;font-weight:500;color:var(--body);}
+.finput,.fselect,.ftextarea{
+  padding:9px 12px;border-radius:8px;
+  border:1px solid var(--arena);background:var(--cream);
+  font-family:'Outfit',sans-serif;font-size:.88rem;color:var(--text);
+  transition:border-color .15s,box-shadow .15s;width:100%;
+}
+.finput:focus,.fselect:focus,.ftextarea:focus{
+  outline:none;border-color:var(--t4);box-shadow:0 0 0 3px rgba(169,106,66,.12);
+}
+.ftextarea{resize:vertical;min-height:80px;}
+.fhint{font-size:.72rem;color:var(--muted);}
+
+/* ── UPLOAD ZONE ── */
+.upload-zone{
+  border:2px dashed var(--arena);border-radius:var(--radius-lg);
+  padding:48px 32px;text-align:center;cursor:pointer;
+  background:var(--white);transition:all .2s;
+  margin-bottom:16px;
+}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--t4);background:var(--a50);}
+.upload-icon{font-size:2.5rem;margin-bottom:12px;}
+.upload-title{font-size:1rem;font-weight:600;color:var(--t7);margin-bottom:6px;}
+.upload-sub{font-size:.82rem;color:var(--muted);}
+.upload-types{display:flex;gap:8px;justify-content:center;margin-top:14px;}
+.utype{font-size:.72rem;padding:3px 10px;border-radius:20px;border:1px solid var(--arena);color:var(--muted);}
+#file-input{display:none;}
+
+.file-preview{
+  background:var(--s1);border:1px solid var(--s2);border-radius:var(--radius);
+  padding:12px 16px;display:none;align-items:center;gap:12px;margin-bottom:16px;
+}
+.file-preview.show{display:flex;}
+.fp-name{font-size:.85rem;font-weight:500;color:var(--s5);flex:1;}
+.fp-remove{font-size:.75rem;color:var(--r4);cursor:pointer;font-weight:500;}
+
+.extracted-preview{
+  background:var(--white);border:1px solid var(--arena);border-radius:var(--radius);
+  padding:14px 16px;font-size:.78rem;color:var(--body);line-height:1.6;
+  max-height:180px;overflow-y:auto;display:none;margin-bottom:16px;
+  font-family:monospace;white-space:pre-wrap;
+}
+.extracted-preview.show{display:block;}
+
+/* ── CTA BUTTON ── */
+.btn-analyze{
+  width:100%;padding:15px 32px;
+  background:linear-gradient(135deg,var(--t5),var(--t7));
+  color:#fff;border:none;border-radius:var(--radius);
+  font-family:'Outfit',sans-serif;font-size:1rem;font-weight:600;
+  cursor:pointer;transition:all .2s;
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  box-shadow:0 4px 20px rgba(139,86,53,.3);
+}
+.btn-analyze:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 8px 32px rgba(139,86,53,.4);}
+.btn-analyze:disabled{opacity:.6;cursor:not-allowed;transform:none;}
+
+/* ── LOADING ── */
+.loading-wrap{
+  display:none;text-align:center;padding:60px 20px;
+  background:var(--white);border:1px solid var(--arena);border-radius:var(--radius-xl);
+  margin-top:28px;
+}
+.loading-wrap.show{display:block;}
+.loading-spinner{
+  width:52px;height:52px;border-radius:50%;
+  border:3px solid var(--t1);border-top-color:var(--t5);
+  animation:spin .9s linear infinite;margin:0 auto 20px;
+}
+@keyframes spin{to{transform:rotate(360deg);}}
+.loading-title{font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:700;color:var(--t7);margin-bottom:8px;}
+.loading-steps{list-style:none;font-size:.83rem;color:var(--muted);}
+.loading-steps li{padding:3px 0;}
+.loading-steps li.active-step{color:var(--t5);font-weight:500;}
+
+/* ── REPORT ── */
+.report{display:none;margin-top:28px;}
+.report.show{display:block;}
+
+/* Veredicto header */
+.veredicto-card{
+  border-radius:var(--radius-xl);padding:28px 32px;margin-bottom:20px;
+  display:flex;align-items:center;gap:28px;flex-wrap:wrap;
+}
+.vc-verde{background:linear-gradient(135deg,var(--s5),#0d4a2d);color:#fff;}
+.vc-amarillo{background:linear-gradient(135deg,var(--w5),#4a3500);color:#fff;}
+.vc-rojo{background:linear-gradient(135deg,var(--r5),#3d0f0f);color:#fff;}
+
+.vc-score{
+  font-family:'Playfair Display',serif;font-size:4rem;font-weight:900;
+  line-height:1;flex-shrink:0;
+}
+.vc-label{font-size:.75rem;opacity:.7;margin-bottom:6px;text-transform:uppercase;letter-spacing:.08em;}
+.vc-title{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:700;line-height:1.2;margin-bottom:8px;}
+.vc-verdict{font-size:.92rem;opacity:.82;line-height:1.6;}
+.vc-semaforo{
+  margin-left:auto;font-size:3rem;width:72px;height:72px;
+  border-radius:50%;background:rgba(255,255,255,.15);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+
+/* KPI bar */
+.kpi-strip{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;
+}
+.kpi-card{
+  background:var(--white);border:1px solid var(--arena);border-radius:var(--radius);
+  padding:16px;
+}
+.kpi-label{font-size:.7rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px;}
+.kpi-value{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:700;color:var(--t7);line-height:1;}
+.kpi-sub{font-size:.72rem;color:var(--muted);margin-top:4px;}
+.kpi-good{color:var(--s5)!important;}
+.kpi-warn{color:var(--w4)!important;}
+.kpi-bad {color:var(--r4)!important;}
+
+/* Dimensiones grid */
+.dim-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;}
+.dim-card{
+  background:var(--white);border:1px solid var(--arena);border-radius:var(--radius);
+  padding:18px 20px;
+}
+.dim-top{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
+.dim-icon{font-size:1.3rem;width:38px;height:38px;border-radius:10px;
+  background:var(--a50);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.dim-name{font-size:.88rem;font-weight:600;color:var(--t7);}
+.dim-score-num{font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:700;margin-left:auto;}
+.dim-bar-track{height:7px;background:var(--a50);border-radius:100px;overflow:hidden;}
+.dim-bar-fill{height:100%;border-radius:100px;transition:width 1.2s ease;}
+.fill-green{background:linear-gradient(90deg,var(--s4),var(--s5));}
+.fill-amber{background:linear-gradient(90deg,var(--w4),var(--w5));}
+.fill-red  {background:linear-gradient(90deg,var(--r4),var(--r5));}
+.dim-analysis{font-size:.8rem;color:var(--body);line-height:1.6;margin-top:10px;}
+
+/* Scenarios */
+.scenarios-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:20px;}
+.scenario-card{
+  border-radius:var(--radius);padding:18px;border:1px solid;
+}
+.sc-opt{background:var(--s1);border-color:var(--s2);}
+.sc-bas{background:var(--b1);border-color:var(--b2);}
+.sc-pes{background:var(--r1);border-color:var(--r2);}
+.sc-title{font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;}
+.sc-opt .sc-title{color:var(--s5);}
+.sc-bas .sc-title{color:var(--b5);}
+.sc-pes .sc-title{color:var(--r5);}
+.sc-kpi{display:flex;justify-content:space-between;font-size:.78rem;padding:5px 0;border-bottom:1px solid rgba(0,0,0,.06);}
+.sc-kpi:last-of-type{border-bottom:none;}
+.sc-klabel{color:var(--body);}
+.sc-kval{font-weight:600;}
+.sc-conclusion{font-size:.76rem;margin-top:10px;line-height:1.55;color:var(--body);font-style:italic;}
+
+/* Risks */
+.risks-list{background:var(--white);border:1px solid var(--arena);border-radius:var(--radius);overflow:hidden;margin-bottom:20px;}
+.risk-item{display:flex;gap:14px;padding:14px 18px;border-bottom:1px solid var(--arena);align-items:flex-start;}
+.risk-item:last-child{border-bottom:none;}
+.risk-level{
+  font-size:.68rem;font-weight:700;padding:3px 9px;border-radius:20px;
+  flex-shrink:0;margin-top:2px;white-space:nowrap;
+}
+.rl-alto{background:var(--r2);color:var(--r5);}
+.rl-medio{background:var(--w2);color:var(--w5);}
+.rl-bajo{background:var(--s1);color:var(--s5);}
+.risk-cat{font-size:.8rem;font-weight:600;color:var(--t7);margin-bottom:3px;}
+.risk-desc{font-size:.78rem;color:var(--body);line-height:1.5;}
+.risk-mit{font-size:.75rem;color:var(--muted);margin-top:4px;font-style:italic;}
+
+/* Recommendations */
+.recs-list{background:var(--white);border:1px solid var(--arena);border-radius:var(--radius);padding:20px 22px;margin-bottom:20px;}
+.rec-item{display:flex;gap:12px;padding:8px 0;border-bottom:1px solid var(--arena);font-size:.85rem;color:var(--body);line-height:1.55;}
+.rec-item:last-child{border-bottom:none;}
+.rec-num{
+  width:22px;height:22px;border-radius:50%;
+  background:var(--t1);color:var(--t6);font-size:.72rem;font-weight:700;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;
+}
+
+/* Conclusion */
+.conclusion-box{
+  background:linear-gradient(135deg,var(--t8),var(--t9));color:#fff;
+  border-radius:var(--radius-xl);padding:28px 32px;margin-bottom:20px;
+}
+.concl-title{font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:700;margin-bottom:10px;opacity:.7;}
+.concl-body{font-size:.92rem;line-height:1.75;opacity:.88;}
+
+/* Actions */
+.report-actions{display:flex;gap:12px;flex-wrap:wrap;}
+.btn-action{
+  padding:10px 22px;border-radius:var(--radius);font-family:'Outfit',sans-serif;
+  font-size:.85rem;font-weight:500;cursor:pointer;transition:all .18s;
+  display:flex;align-items:center;gap:7px;
+}
+.btn-new{background:var(--t7);color:#fff;border:none;box-shadow:0 2px 10px rgba(74,46,30,.25);}
+.btn-new:hover{background:var(--t6);transform:translateY(-1px);}
+.btn-print{background:var(--white);color:var(--t7);border:1px solid var(--arena);}
+.btn-print:hover{border-color:var(--t4);}
+
+/* section titles in report */
+.rep-section-title{
+  font-family:'Playfair Display',serif;font-size:1rem;font-weight:700;color:var(--t7);
+  margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--arena);
+  display:flex;align-items:center;gap:8px;
+}
+
+/* error */
+.error-box{
+  background:var(--r1);border:1px solid var(--r2);border-radius:var(--radius);
+  padding:16px 20px;margin-top:16px;font-size:.85rem;color:var(--r5);display:none;
+}
+.error-box.show{display:block;}
+
+@media(max-width:720px){
+  .form-grid,.form-grid-3{grid-template-columns:1fr;}
+  .kpi-strip{grid-template-columns:1fr 1fr;}
+  .dim-grid,.scenarios-row{grid-template-columns:1fr;}
+}
+
+@media print{
+  .nav,.input-tabs,.btn-analyze,.report-actions{display:none!important;}
+  .report{display:block!important;}
+}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div>
+    <span class="nav-logo">Obra<span>Docs</span></span>
+  </div>
+  <div class="nav-badge">🏗️ Agente de Viabilidad</div>
+</nav>
+
+<div class="app">
+
+  <div class="app-header">
+    <h1 class="app-title">Agente de <em>Viabilidad de Proyecto</em></h1>
+    <p class="app-sub">Análisis ultra-detallado con IA: KPIs financieros · 3 escenarios · análisis de riesgo · recomendaciones accionables</p>
+  </div>
+
+  <!-- Input method tabs -->
+  <div class="input-tabs">
+    <div class="itab active" id="tab-form" onclick="switchInputTab('form')">📝 Captura manual</div>
+    <div class="itab" id="tab-upload" onclick="switchInputTab('upload')">📎 Sube archivo Excel / PDF</div>
+  </div>
+
+  <!-- ── PANEL FORM ── -->
+  <div class="input-panel active" id="panel-form">
+
+    <div class="form-section">
+      <div class="section-label">Datos Generales del Proyecto</div>
+      <div class="form-grid">
+        <div class="fgroup">
+          <label class="flabel">Nombre del proyecto</label>
+          <input class="finput" id="nombre" placeholder="Ej. Torre Cumbres Residencial">
+        </div>
+        <div class="fgroup">
+          <label class="flabel">Tipo de proyecto</label>
+          <select class="fselect" id="tipo">
+            <option value="">Selecciona...</option>
+            <option>Residencial — casas</option>
+            <option>Residencial — departamentos</option>
+            <option>Comercial — plaza / retail</option>
+            <option>Comercial — oficinas</option>
+            <option>Industrial — bodega / nave</option>
+            <option>Mixto — usos múltiples</option>
+            <option>Desarrollo maestro</option>
+            <option>Hotelero / turístico</option>
+          </select>
+        </div>
+        <div class="fgroup">
+          <label class="flabel">Ciudad / Estado</label>
+          <input class="finput" id="ciudad" placeholder="Ej. Monterrey, Nuevo León">
+        </div>
+        <div class="fgroup">
+          <label class="flabel">Número de unidades / lotes</label>
+          <input class="finput" id="unidades" type="number" placeholder="Ej. 120">
+        </div>
+        <div class="fgroup">
+          <label class="flabel">Plazo de construcción (meses)</label>
+          <input class="finput" id="plazo_const" type="number" placeholder="Ej. 24">
+        </div>
+        <div class="fgroup">
+          <label class="flabel">Plazo de venta / absorción (meses)</label>
+          <input class="finput" id="plazo_venta" type="number" placeholder="Ej. 18">
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="section-label">Superficie y Programa Arquitectónico</div>
+      <div class="form-grid-3">
+        <div class="fgroup">
+          <label class="flabel">Superficie de terreno (m²)</label>
+          <input class="finput" id="m2_terreno" type="number" placeholder="Ej. 5,000">
+        </div>
+        <div class="fgroup">
+          <label class="flabel">Superficie construida total (m²)</label>
+          <input class="finput" id="m2_construidos" type="number" placeholder="Ej. 8,400">
+        </div>
+        <div class="fgroup">
+          <label class="flabel">Superficie vendible (m²)</label>
+          <input class="finput" id="m2_vendibles" type="number" placeholder="Ej. 7,200">
+          <span class="fhint">Excluye áreas comunes, cajones, etc.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="section-label">Estructura Financiera</div>
+      <div class="form-grid">
+        <div class="fgroup">
+          <label class="flabel">Costo de terreno ($MXN)</label>
+          <input class="finput" id="costo_terreno" type="number" placeholder="Ej. 4,500,000">
+        </div>
+        <div class="fgroup">
+          <label class="flabel">Costo de construcción por m² ($MXN)</label>
+          <input class="finput" id="costo_m2" type="number" placeholder="Ej. 18,500">
+        </div>
+        <div class="fgroup">
+          <label class="flabel">Costos indirectos estimados ($MXN)</label>
+          <input class="finput" id="costos_indirectos" type="number" placeholder="Ej. 1,200,000">
+          <span class="fhint">Licencias, proyecto, ventas, financiero</span>
+        </div>
+        <div class="fgroup">
+          <label class="flabel">Precio de venta por m² vendible ($MXN)</label>
+          <input class="finput" id="precio_m2" type="number" placeholder="Ej. 35,000">
+        </div>
+        <div class="fgroup">
+          <label class="flabel">Financiamiento requerido (%)</label>
+          <input class="finput" id="financiamiento_pct" type="number" placeholder="Ej. 60" min="0" max="100">
+          <span class="fhint">Porcentaje del costo total que será crédito</span>
+        </div>
+        <div class="fgroup">
+          <label class="flabel">Tasa de interés anual (%)</label>
+          <input class="finput" id="tasa_interes" type="number" placeholder="Ej. 12.5">
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="section-label">Contexto de Mercado y Factores de Riesgo</div>
+      <div class="form-grid">
+        <div class="fgroup">
+          <label class="flabel">Precio de mercado en la zona ($/m²)</label>
+          <input class="finput" id="precio_mercado" type="number" placeholder="Ej. 30,000">
+          <span class="fhint">Precio de venta de competidores directos</span>
+        </div>
+        <div class="fgroup">
+          <label class="flabel">Velocidad de absorción en la zona (u/mes)</label>
+          <input class="finput" id="absorcion" type="number" placeholder="Ej. 5">
+          <span class="fhint">Unidades que se venden por mes en el mercado</span>
+        </div>
+        <div class="fgroup">
+          <label class="flabel">Número de proyectos competidores directos</label>
+          <input class="finput" id="competidores" type="number" placeholder="Ej. 3">
+        </div>
+        <div class="fgroup">
+          <label class="flabel">Status del uso de suelo</label>
+          <select class="fselect" id="uso_suelo">
+            <option value="">Selecciona...</option>
+            <option>Confirmado y vigente</option>
+            <option>En trámite de cambio</option>
+            <option>Pendiente de resolución</option>
+            <option>Requiere cambio de uso de suelo</option>
+          </select>
+        </div>
+        <div class="fgroup form-full">
+          <label class="flabel">Contexto adicional del proyecto (opcional)</label>
+          <textarea class="ftextarea" id="contexto" placeholder="Ej. El terreno tiene acceso a dos vialidades primarias. Se anticipa un proyecto de infraestructura de metro cercano en 2026. El promotor tiene experiencia de 3 proyectos similares en la zona..."></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PANEL UPLOAD ── -->
+  <div class="input-panel" id="panel-upload">
+    <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()"
+      ondragover="event.preventDefault();this.classList.add('drag')"
+      ondragleave="this.classList.remove('drag')"
+      ondrop="handleDrop(event)">
+      <div class="upload-icon">📂</div>
+      <div class="upload-title">Arrastra tu archivo aquí o haz clic para seleccionar</div>
+      <div class="upload-sub">Se extraerá la información del proyecto automáticamente</div>
+      <div class="upload-types">
+        <span class="utype">Excel .xlsx</span>
+        <span class="utype">Excel .xls</span>
+        <span class="utype">CSV .csv</span>
+        <span class="utype">Texto .txt</span>
+      </div>
+    </div>
+    <input type="file" id="file-input" accept=".xlsx,.xls,.csv,.txt" onchange="handleFileSelect(event)">
+
+    <div class="file-preview" id="file-preview">
+      <span>📄</span>
+      <span class="fp-name" id="fp-name"></span>
+      <span class="fp-remove" onclick="removeFile()">✕ Quitar</span>
+    </div>
+
+    <div class="extracted-preview" id="extracted-preview"></div>
+
+    <div class="form-section" style="margin-top:0;">
+      <div class="section-label">Contexto adicional del archivo</div>
+      <div class="fgroup">
+        <label class="flabel">¿Qué contiene el archivo? (ayuda al agente a interpretarlo mejor)</label>
+        <textarea class="ftextarea" id="file-context" placeholder="Ej. Este es el presupuesto de obra de un desarrollo residencial en Guadalajara. La hoja 'Costos' tiene el desglose por partidas y la hoja 'Ventas' tiene la proyección de ingresos..."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <div class="error-box" id="error-box"></div>
+
+  <button class="btn-analyze" id="btn-analyze" onclick="runAnalysis()">
+    <span id="btn-text">🧠 Analizar Viabilidad del Proyecto</span>
+  </button>
+
+  <!-- Loading -->
+  <div class="loading-wrap" id="loading-wrap">
+    <div class="loading-spinner"></div>
+    <div class="loading-title">El Agente está analizando tu proyecto...</div>
+    <ul class="loading-steps" id="loading-steps">
+      <li id="ls1">📐 Calculando estructura financiera</li>
+      <li id="ls2">📊 Evaluando KPIs de rentabilidad</li>
+      <li id="ls3">🌍 Analizando contexto de mercado</li>
+      <li id="ls4">⚠️ Identificando factores de riesgo</li>
+      <li id="ls5">📈 Proyectando escenarios</li>
+      <li id="ls6">✍️ Redactando reporte ejecutivo</li>
+    </ul>
+  </div>
+
+  <!-- ── REPORT ── -->
+  <div class="report" id="report"></div>
+
+</div>
+
+<script>
+var currentTab = 'form';
+var uploadedContent = '';
+var uploadedFileName = '';
+
+function switchInputTab(t) {
+  currentTab = t;
+  document.querySelectorAll('.itab').forEach(function(el){ el.classList.remove('active'); });
+  document.querySelectorAll('.input-panel').forEach(function(el){ el.classList.remove('active'); });
+  document.getElementById('tab-' + t).classList.add('active');
+  document.getElementById('panel-' + t).classList.add('active');
+}
+
+/* ── FILE HANDLING ── */
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('upload-zone').classList.remove('drag');
+  var files = e.dataTransfer.files;
+  if (files.length > 0) processFile(files[0]);
+}
+
+function handleFileSelect(e) {
+  if (e.target.files.length > 0) processFile(e.target.files[0]);
+}
+
+function processFile(file) {
+  uploadedFileName = file.name;
+  document.getElementById('fp-name').textContent = file.name;
+  document.getElementById('file-preview').classList.add('show');
+  var ext = file.name.split('.').pop().toLowerCase();
+  if (ext === 'xlsx' || ext === 'xls') {
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var wb = XLSX.read(e.target.result, { type: 'binary' });
+      var text = '';
+      wb.SheetNames.forEach(function(sn) {
+        var ws = wb.Sheets[sn];
+        var csv = XLSX.utils.sheet_to_csv(ws, { FS: ' | ' });
+        var rows = csv.split('\n').filter(function(r){ return r.replace(/[|,\s]/g,'').length > 0; });
+        text += '=== Hoja: ' + sn + ' ===\n' + rows.join('\n') + '\n\n';
+      });
+      uploadedContent = text.substring(0, 6000);
+      var prev = document.getElementById('extracted-preview');
+      prev.textContent = uploadedContent.substring(0, 800) + (uploadedContent.length > 800 ? '\n... (y más datos)' : '');
+      prev.classList.add('show');
+    };
+    reader.readAsBinaryString(file);
+  } else if (ext === 'csv' || ext === 'txt') {
+    var reader2 = new FileReader();
+    reader2.onload = function(e) {
+      uploadedContent = e.target.result.substring(0, 6000);
+      var prev = document.getElementById('extracted-preview');
+      prev.textContent = uploadedContent.substring(0, 800) + (uploadedContent.length > 800 ? '\n...' : '');
+      prev.classList.add('show');
+    };
+    reader2.readAsText(file);
+  }
+}
+
+function removeFile() {
+  uploadedContent = '';
+  uploadedFileName = '';
+  document.getElementById('file-preview').classList.remove('show');
+  document.getElementById('extracted-preview').classList.remove('show');
+  document.getElementById('file-input').value = '';
+}
+
+/* ── HELPERS ── */
+function fmtMXN(v) {
+  if (!v && v !== 0) return 'N/D';
+  var n = parseFloat(v);
+  if (isNaN(n)) return 'N/D';
+  if (Math.abs(n) >= 1e9) return '$' + (n/1e9).toFixed(2) + 'B';
+  if (Math.abs(n) >= 1e6) return '$' + (n/1e6).toFixed(2) + 'M';
+  if (Math.abs(n) >= 1e3) return '$' + (n/1e3).toFixed(1) + 'K';
+  return '$' + n.toFixed(0);
+}
+
+function scoreColor(s) {
+  if (s >= 70) return 'kpi-good';
+  if (s >= 45) return 'kpi-warn';
+  return 'kpi-bad';
+}
+
+function barFillClass(s) {
+  if (s >= 70) return 'fill-green';
+  if (s >= 45) return 'fill-amber';
+  return 'fill-red';
+}
+
+function riskClass(nivel) {
+  if (!nivel) return 'rl-medio';
+  var n = nivel.toLowerCase();
+  if (n.includes('alto') || n.includes('crítico') || n.includes('critico')) return 'rl-alto';
+  if (n.includes('bajo')) return 'rl-bajo';
+  return 'rl-medio';
+}
+
+function vcClass(semaforo) {
+  if (!semaforo) return 'vc-amarillo';
+  var s = semaforo.toLowerCase();
+  if (s.includes('verde')) return 'vc-verde';
+  if (s.includes('rojo')) return 'vc-rojo';
+  return 'vc-amarillo';
+}
+
+function semaforoEmoji(s) {
+  if (!s) return '🟡';
+  var sl = s.toLowerCase();
+  if (sl.includes('verde')) return '🟢';
+  if (sl.includes('rojo')) return '🔴';
+  return '🟡';
+}
+
+/* ── LOADING ANIMATION ── */
+var lsTimer = null;
+function startLoadingAnim() {
+  var steps = ['ls1','ls2','ls3','ls4','ls5','ls6'];
+  var i = 0;
+  steps.forEach(function(id){ document.getElementById(id).classList.remove('active-step'); });
+  document.getElementById(steps[0]).classList.add('active-step');
+  lsTimer = setInterval(function() {
+    if (i < steps.length - 1) {
+      document.getElementById(steps[i]).classList.remove('active-step');
+      i++;
+      document.getElementById(steps[i]).classList.add('active-step');
+    }
+  }, 2400);
+}
+function stopLoadingAnim() { if (lsTimer) clearInterval(lsTimer); }
+
+/* ── BUILD PROMPT ── */
+function buildPrompt() {
+  if (currentTab === 'form') {
+    var fields = {
+      nombre: document.getElementById('nombre').value,
+      tipo: document.getElementById('tipo').value,
+      ciudad: document.getElementById('ciudad').value,
+      unidades: document.getElementById('unidades').value,
+      plazo_const: document.getElementById('plazo_const').value,
+      plazo_venta: document.getElementById('plazo_venta').value,
+      m2_terreno: document.getElementById('m2_terreno').value,
+      m2_construidos: document.getElementById('m2_construidos').value,
+      m2_vendibles: document.getElementById('m2_vendibles').value,
+      costo_terreno: document.getElementById('costo_terreno').value,
+      costo_m2: document.getElementById('costo_m2').value,
+      costos_indirectos: document.getElementById('costos_indirectos').value,
+      precio_m2: document.getElementById('precio_m2').value,
+      financiamiento_pct: document.getElementById('financiamiento_pct').value,
+      tasa_interes: document.getElementById('tasa_interes').value,
+      precio_mercado: document.getElementById('precio_mercado').value,
+      absorcion: document.getElementById('absorcion').value,
+      competidores: document.getElementById('competidores').value,
+      uso_suelo: document.getElementById('uso_suelo').value,
+      contexto: document.getElementById('contexto').value
+    };
+    var lines = [];
+    if (fields.nombre) lines.push('Nombre: ' + fields.nombre);
+    if (fields.tipo) lines.push('Tipo: ' + fields.tipo);
+    if (fields.ciudad) lines.push('Ciudad: ' + fields.ciudad);
+    if (fields.unidades) lines.push('Unidades: ' + fields.unidades);
+    if (fields.plazo_const) lines.push('Plazo construcción: ' + fields.plazo_const + ' meses');
+    if (fields.plazo_venta) lines.push('Plazo venta: ' + fields.plazo_venta + ' meses');
+    if (fields.m2_terreno) lines.push('Superficie terreno: ' + fields.m2_terreno + ' m²');
+    if (fields.m2_construidos) lines.push('Superficie construida: ' + fields.m2_construidos + ' m²');
+    if (fields.m2_vendibles) lines.push('Superficie vendible: ' + fields.m2_vendibles + ' m²');
+    if (fields.costo_terreno) lines.push('Costo terreno: $' + fields.costo_terreno + ' MXN');
+    if (fields.costo_m2) lines.push('Costo construcción/m²: $' + fields.costo_m2 + ' MXN');
+    if (fields.costos_indirectos) lines.push('Costos indirectos: $' + fields.costos_indirectos + ' MXN');
+    if (fields.precio_m2) lines.push('Precio venta/m² vendible: $' + fields.precio_m2 + ' MXN');
+    if (fields.financiamiento_pct) lines.push('Financiamiento: ' + fields.financiamiento_pct + '%');
+    if (fields.tasa_interes) lines.push('Tasa de interés anual: ' + fields.tasa_interes + '%');
+    if (fields.precio_mercado) lines.push('Precio de mercado zona: $' + fields.precio_mercado + '/m²');
+    if (fields.absorcion) lines.push('Velocidad absorción zona: ' + fields.absorcion + ' unidades/mes');
+    if (fields.competidores) lines.push('Proyectos competidores directos: ' + fields.competidores);
+    if (fields.uso_suelo) lines.push('Uso de suelo: ' + fields.uso_suelo);
+    if (fields.contexto) lines.push('Contexto adicional: ' + fields.contexto);
+    return lines.join('\n');
+  } else {
+    var ctx = document.getElementById('file-context').value;
+    return (ctx ? 'CONTEXTO DEL ARCHIVO: ' + ctx + '\n\n' : '') + 'DATOS EXTRAÍDOS DEL ARCHIVO:\n' + uploadedContent;
+  }
+}
+
+/* ── RENDER REPORT ── */
+function renderReport(d) {
+  var h = '';
+
+  // Veredicto
+  var vcCls = vcClass(d.semaforo);
+  h += '<div class="veredicto-card ' + vcCls + '">';
+  h += '<div class="vc-score">' + (d.viabilidad_score || '—') + '</div>';
+  h += '<div style="flex:1"><div class="vc-label">Puntaje de viabilidad</div>';
+  h += '<div class="vc-title">' + (d.veredicto_titulo || 'Análisis de Viabilidad') + '</div>';
+  h += '<div class="vc-verdict">' + (d.veredicto_resumen || '') + '</div></div>';
+  h += '<div class="vc-semaforo">' + semaforoEmoji(d.semaforo) + '</div>';
+  h += '</div>';
+
+  // KPIs
+  if (d.kpis) {
+    h += '<div class="kpi-strip">';
+    var kpis = [
+      { label:'ROI del proyecto', val: d.kpis.roi, sub:'Retorno sobre inversión' },
+      { label:'TIR estimada', val: d.kpis.tir, sub:'Tasa interna de retorno' },
+      { label:'Margen bruto', val: d.kpis.margen_bruto, sub:'Sobre ingresos totales' },
+      { label:'Payback', val: d.kpis.payback, sub:'Período de recuperación' }
+    ];
+    kpis.forEach(function(k) {
+      var val = k.val || 'N/D';
+      var cls = '';
+      if (val !== 'N/D') {
+        var n = parseFloat(val);
+        if (!isNaN(n)) cls = n > 0 ? 'kpi-good' : 'kpi-bad';
+      }
+      h += '<div class="kpi-card"><div class="kpi-label">' + k.label + '</div>';
+      h += '<div class="kpi-value ' + cls + '">' + val + '</div>';
+      h += '<div class="kpi-sub">' + k.sub + '</div></div>';
+    });
+    h += '</div>';
+    if (d.kpis.ingresos_totales || d.kpis.costo_total || d.kpis.utilidad || d.kpis.punto_equilibrio) {
+      h += '<div class="kpi-strip">';
+      var kpis2 = [
+        { label:'Ingresos totales', val: fmtMXN(d.kpis.ingresos_totales), sub:'Proyección de ventas' },
+        { label:'Costo total del proyecto', val: fmtMXN(d.kpis.costo_total), sub:'Incluye terreno + obra + indirectos' },
+        { label:'Utilidad neta estimada', val: fmtMXN(d.kpis.utilidad), sub:'Antes de ISR' },
+        { label:'Punto de equilibrio', val: d.kpis.punto_equilibrio || 'N/D', sub:'% de ventas para cubrir costos' }
+      ];
+      kpis2.forEach(function(k) {
+        h += '<div class="kpi-card"><div class="kpi-label">' + k.label + '</div>';
+        h += '<div class="kpi-value">' + k.val + '</div>';
+        h += '<div class="kpi-sub">' + k.sub + '</div></div>';
+      });
+      h += '</div>';
+    }
+  }
+
+  // Dimensiones
+  if (d.dimensiones) {
+    h += '<div class="rep-section-title">📐 Evaluación por Dimensión</div>';
+    h += '<div class="dim-grid">';
+    var dims = [
+      { key:'financiera', icon:'💰', name:'Viabilidad Financiera' },
+      { key:'mercado',    icon:'🏘️', name:'Viabilidad de Mercado' },
+      { key:'tecnica',    icon:'🏗️', name:'Factibilidad Técnica' },
+      { key:'legal',      icon:'📋', name:'Marco Legal / Permisos' },
+      { key:'ambiental',  icon:'🌿', name:'Factibilidad Ambiental' },
+      { key:'comercial',  icon:'📈', name:'Estrategia Comercial' }
+    ];
+    dims.forEach(function(dim) {
+      var dd = d.dimensiones[dim.key];
+      if (!dd) return;
+      var sc = parseInt(dd.score) || 50;
+      var bfc = barFillClass(sc);
+      var nc = scoreColor(sc);
+      h += '<div class="dim-card">';
+      h += '<div class="dim-top">';
+      h += '<div class="dim-icon">' + dim.icon + '</div>';
+      h += '<div class="dim-name">' + dim.name + '</div>';
+      h += '<div class="dim-score-num ' + nc + '">' + sc + '/100</div>';
+      h += '</div>';
+      h += '<div class="dim-bar-track"><div class="dim-bar-fill ' + bfc + '" style="width:' + sc + '%"></div></div>';
+      h += '<div class="dim-analysis">' + (dd.analisis || '') + '</div>';
+      h += '</div>';
+    });
+    h += '</div>';
+  }
+
+  // Escenarios
+  if (d.escenarios) {
+    h += '<div class="rep-section-title">📊 Análisis de Escenarios</div>';
+    h += '<div class="scenarios-row">';
+    var scns = [
+      { key:'optimista', cls:'sc-opt', label:'🚀 Escenario Optimista' },
+      { key:'base',      cls:'sc-bas', label:'📌 Escenario Base' },
+      { key:'pesimista', cls:'sc-pes', label:'⚠️ Escenario Pesimista' }
+    ];
+    scns.forEach(function(sc) {
+      var s = d.escenarios[sc.key];
+      if (!s) return;
+      h += '<div class="scenario-card ' + sc.cls + '">';
+      h += '<div class="sc-title">' + sc.label + '</div>';
+      var metrics = [
+        ['ROI', s.roi || 'N/D'],
+        ['Ingresos', s.ingresos ? fmtMXN(s.ingresos) : (s.ingresos_totales ? fmtMXN(s.ingresos_totales) : 'N/D')],
+        ['Margen', s.margen || 'N/D'],
+        ['Payback', s.payback || 'N/D']
+      ];
+      metrics.forEach(function(m) {
+        h += '<div class="sc-kpi"><span class="sc-klabel">' + m[0] + '</span><span class="sc-kval">' + m[1] + '</span></div>';
+      });
+      h += '<div class="sc-conclusion">' + (s.conclusion || '') + '</div>';
+      h += '</div>';
+    });
+    h += '</div>';
+  }
+
+  // Riesgos
+  if (d.riesgos && d.riesgos.length) {
+    h += '<div class="rep-section-title">⚠️ Matriz de Riesgos</div>';
+    h += '<div class="risks-list">';
+    d.riesgos.forEach(function(r) {
+      h += '<div class="risk-item">';
+      h += '<span class="risk-level ' + riskClass(r.nivel) + '">' + (r.nivel || 'Medio') + '</span>';
+      h += '<div><div class="risk-cat">' + (r.categoria || '') + '</div>';
+      h += '<div class="risk-desc">' + (r.descripcion || '') + '</div>';
+      if (r.mitigacion) h += '<div class="risk-mit">💡 ' + r.mitigacion + '</div>';
+      h += '</div></div>';
+    });
+    h += '</div>';
+  }
+
+  // Recomendaciones
+  if (d.recomendaciones && d.recomendaciones.length) {
+    h += '<div class="rep-section-title">✅ Recomendaciones Accionables</div>';
+    h += '<div class="recs-list">';
+    d.recomendaciones.forEach(function(r, i) {
+      h += '<div class="rec-item"><div class="rec-num">' + (i+1) + '</div><div>' + r + '</div></div>';
+    });
+    h += '</div>';
+  }
+
+  // Conclusión ejecutiva
+  if (d.conclusion_ejecutiva) {
+    h += '<div class="rep-section-title">📝 Conclusión Ejecutiva</div>';
+    h += '<div class="conclusion-box">';
+    h += '<div class="concl-title">Dictamen del Agente de Viabilidad</div>';
+    h += '<div class="concl-body">' + d.conclusion_ejecutiva + '</div>';
+    h += '</div>';
+  }
+
+  // Actions
+  h += '<div class="report-actions">';
+  h += '<button class="btn-action btn-new" onclick="resetAll()">🔄 Nuevo Análisis</button>';
+  h += '<button class="btn-action btn-print" onclick="window.print()">🖨️ Imprimir Reporte</button>';
+  h += '</div>';
+
+  document.getElementById('report').innerHTML = h;
+  document.getElementById('report').classList.add('show');
+  document.getElementById('report').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+/* ── MAIN ANALYSIS ── */
+async function runAnalysis() {
+  // Validate
+  var errBox = document.getElementById('error-box');
+  errBox.classList.remove('show');
+
+  var prompt = buildPrompt().trim();
+  if (prompt.length < 40) {
+    errBox.textContent = currentTab === 'form'
+      ? 'Por favor completa al menos los campos principales del proyecto (tipo, ciudad, costos y precios).'
+      : 'Por favor sube un archivo o agrega contexto sobre el proyecto.';
+    errBox.classList.add('show');
+    return;
+  }
+
+  // UI state
+  document.getElementById('btn-analyze').disabled = true;
+  document.getElementById('btn-text').textContent = 'Analizando...';
+  document.getElementById('loading-wrap').classList.add('show');
+  document.getElementById('report').classList.remove('show');
+  startLoadingAnim();
+
+  var systemPrompt = `Eres el Agente de Viabilidad de ObraDocs, un experto analista financiero inmobiliario con 20 años de experiencia en el mercado mexicano (CDMX, GDM, MTY, QRO y principales ciudades). 
+  
+Tu tarea es analizar la viabilidad de proyectos inmobiliarios y de construcción con rigor profesional. Conoces profundamente: tasas hipotecarias mexicanas, costos de construcción por región, velocidades de absorción por segmento, marco legal (uso de suelo CDMX, SEDESOL, NOM-001-CONAVI), financiamiento bancario e infonavit, impacto de inflación en costos de materiales, y los principales riesgos del sector constructor en México 2024-2025.
+
+IMPORTANTE: Responde ÚNICAMENTE con un objeto JSON válido, sin backticks, sin markdown, sin texto antes o después. El JSON debe tener EXACTAMENTE esta estructura:
+
+{
+  "viabilidad_score": número del 0 al 100,
+  "semaforo": "Verde" | "Amarillo" | "Rojo",
+  "veredicto_titulo": "título ejecutivo corto de 5-8 palabras",
+  "veredicto_resumen": "2-3 oraciones de diagnóstico general del proyecto",
+  "kpis": {
+    "roi": "XX%",
+    "tir": "XX%",
+    "margen_bruto": "XX%",
+    "margen_neto": "XX%",
+    "payback": "XX meses",
+    "ingresos_totales": número en MXN,
+    "costo_total": número en MXN,
+    "utilidad": número en MXN,
+    "punto_equilibrio": "XX% de ventas"
+  },
+  "dimensiones": {
+    "financiera":  { "score": 0-100, "analisis": "análisis de 2-3 oraciones" },
+    "mercado":     { "score": 0-100, "analisis": "análisis de 2-3 oraciones" },
+    "tecnica":     { "score": 0-100, "analisis": "análisis de 2-3 oraciones" },
+    "legal":       { "score": 0-100, "analisis": "análisis de 2-3 oraciones" },
+    "ambiental":   { "score": 0-100, "analisis": "análisis de 2-3 oraciones" },
+    "comercial":   { "score": 0-100, "analisis": "análisis de 2-3 oraciones" }
+  },
+  "escenarios": {
+    "optimista":  { "roi": "XX%", "ingresos": número, "margen": "XX%", "payback": "XX meses", "conclusion": "1-2 oraciones" },
+    "base":       { "roi": "XX%", "ingresos": número, "margen": "XX%", "payback": "XX meses", "conclusion": "1-2 oraciones" },
+    "pesimista":  { "roi": "XX%", "ingresos": número, "margen": "XX%", "payback": "XX meses", "conclusion": "1-2 oraciones" }
+  },
+  "riesgos": [
+    { "categoria": "nombre", "nivel": "Alto|Medio|Bajo", "descripcion": "descripción concisa", "mitigacion": "acción de mitigación" }
+  ],
+  "recomendaciones": ["recomendación 1", "recomendación 2", "..."],
+  "conclusion_ejecutiva": "párrafo ejecutivo de 4-6 oraciones con el veredicto final, los factores decisivos y las condiciones bajo las cuales el proyecto es recomendable o no"
+}
+
+Si faltan datos críticos, haz supuestos razonables basados en promedios del mercado mexicano y menciónalos en el análisis. Siempre calcula los KPIs aunque sea con estimaciones.`;
+
+  try {
+    var response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 3000,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: 'Analiza la viabilidad del siguiente proyecto inmobiliario:\n\n' + prompt }]
+      })
+    });
+
+    if (!response.ok) throw new Error('API error: ' + response.status);
+    var data = await response.json();
+    var raw = data.content[0].text.trim();
+    // Clean possible backticks
+    raw = raw.replace(/^```json\s*/i,'').replace(/^```\s*/,'').replace(/\s*```$/,'').trim();
+
+    var parsed = JSON.parse(raw);
+    stopLoadingAnim();
+    document.getElementById('loading-wrap').classList.remove('show');
+    renderReport(parsed);
+
+  } catch(e) {
+    stopLoadingAnim();
+    document.getElementById('loading-wrap').classList.remove('show');
+    errBox.textContent = 'Error al analizar el proyecto: ' + e.message + '. Verifica tu conexión e intenta de nuevo.';
+    errBox.classList.add('show');
+  } finally {
+    document.getElementById('btn-analyze').disabled = false;
+    document.getElementById('btn-text').textContent = '🧠 Analizar Viabilidad del Proyecto';
+  }
+}
+
+function resetAll() {
+  document.getElementById('report').classList.remove('show');
+  document.getElementById('report').innerHTML = '';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+</script>
+</body>
+</html>

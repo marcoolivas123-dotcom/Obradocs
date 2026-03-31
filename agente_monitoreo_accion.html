@@ -1,0 +1,1262 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ObraDocs — Agente de Monitoreo y Acción</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root {
+  --t9:#1a100a;--t8:#2d1c12;--t7:#4a2e1e;--t6:#6b4228;--t5:#8b5635;
+  --t4:#a96a42;--t3:#c4845a;--t2:#d9a882;--t1:#ecd3bb;--t0:#faf3eb;
+  --arena:#ddd0bc;--cream:#fdfaf6;--white:#ffffff;
+  --b8:#0f2040;--b7:#163058;--b6:#1d4275;--b5:#245492;--b4:#3a6eb5;--b2:#daeaf8;--b1:#f0f6fd;
+  --s6:#155534;--s5:#1a6b42;--s4:#2d9e62;--s2:#b4f0d0;--s1:#e2f9ee;
+  --r5:#8b2020;--r4:#c43232;--r2:#fdd;--r1:#fff0f0;
+  --w5:#7a5a0a;--w4:#c49a1a;--w2:#fdf0b4;--w1:#fffde8;
+  --text:#1a100a;--body:#4a2e1e;--muted:#9e8870;
+  --rad:10px;--rad-lg:16px;--rad-xl:22px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{font-family:'Outfit',sans-serif;background:#0f0f0f;color:#e8e0d8;min-height:100vh;display:flex;flex-direction:column;}
+
+/* ══ TOPBAR ══ */
+.topbar{
+  background:#1a1410;border-bottom:1px solid #2d1c12;
+  height:60px;display:flex;align-items:center;justify-content:space-between;
+  padding:0 24px;position:sticky;top:0;z-index:200;
+}
+.topbar-logo{font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:900;color:#ecd3bb;}
+.topbar-logo span{color:var(--t3);}
+.topbar-center{display:flex;gap:4px;}
+.nav-btn{
+  padding:7px 16px;border-radius:20px;font-size:.78rem;font-weight:500;
+  background:transparent;border:1px solid #2d1c12;color:#9e8870;
+  cursor:pointer;transition:all .18s;
+}
+.nav-btn.active{background:var(--t7);color:#ecd3bb;border-color:var(--t7);}
+.nav-btn:hover:not(.active){border-color:var(--t5);color:var(--t2);}
+.topbar-right{display:flex;align-items:center;gap:10px;}
+.alert-badge{
+  position:relative;cursor:pointer;
+  width:34px;height:34px;border-radius:50%;background:#2d1c12;
+  display:flex;align-items:center;justify-content:center;font-size:.95rem;
+  border:1px solid #4a2e1e;transition:background .18s;
+}
+.alert-badge:hover{background:#4a2e1e;}
+.alert-count{
+  position:absolute;top:-3px;right:-3px;
+  background:var(--r4);color:#fff;font-size:.6rem;font-weight:700;
+  width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+}
+.status-pill{
+  font-size:.72rem;font-weight:600;padding:5px 12px;border-radius:20px;
+  display:flex;align-items:center;gap:6px;
+}
+.status-live{background:rgba(45,158,98,.15);color:#3dc47c;border:1px solid rgba(45,158,98,.3);}
+.status-dot{width:7px;height:7px;border-radius:50%;background:#3dc47c;animation:blink 1.5s infinite;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.3;}}
+
+/* ══ MAIN LAYOUT ══ */
+.main{display:flex;flex:1;overflow:hidden;}
+.sidebar{
+  width:240px;flex-shrink:0;background:#141210;border-right:1px solid #2d1c12;
+  padding:20px 0;overflow-y:auto;
+}
+.sidebar-section{padding:0 16px;margin-bottom:24px;}
+.sidebar-label{font-size:.65rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#5a4030;margin-bottom:10px;}
+.sidebar-item{
+  display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;
+  font-size:.82rem;color:#9e8870;cursor:pointer;transition:all .18s;margin-bottom:2px;
+}
+.sidebar-item:hover{background:#1f1510;color:#d9a882;}
+.sidebar-item.active{background:#2d1c12;color:#ecd3bb;}
+.sidebar-item .si-icon{font-size:1rem;width:20px;text-align:center;}
+.sidebar-item .si-badge{margin-left:auto;font-size:.65rem;padding:2px 7px;border-radius:10px;font-weight:700;}
+.badge-red{background:rgba(196,50,50,.2);color:#f08080;}
+.badge-yellow{background:rgba(196,154,26,.2);color:#f0c060;}
+.badge-green{background:rgba(45,158,98,.15);color:#3dc47c;}
+
+.content{flex:1;overflow-y:auto;padding:24px;}
+
+/* ══ PANELS ══ */
+.panel{display:none;} .panel.active{display:block;}
+
+/* ══ CONFIG PANEL ══ */
+.config-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;}
+.config-card{
+  background:#1a1410;border:1px solid #2d1c12;border-radius:var(--rad-lg);
+  padding:20px 22px;
+}
+.cc-title{font-size:.85rem;font-weight:600;color:var(--t2);margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+.cc-title span{font-size:1.1rem;}
+.fgroup{display:flex;flex-direction:column;gap:5px;margin-bottom:12px;}
+.flabel{font-size:.75rem;color:#9e8870;font-weight:500;}
+.finput,.fselect{
+  padding:8px 11px;border-radius:7px;border:1px solid #2d1c12;
+  background:#0f0f0f;font-family:'Outfit',sans-serif;font-size:.83rem;color:#d9a882;
+  width:100%;transition:border-color .15s;
+}
+.finput:focus,.fselect:focus{outline:none;border-color:var(--t4);box-shadow:0 0 0 3px rgba(169,106,66,.1);}
+.fhint{font-size:.7rem;color:#5a4030;}
+.fselect option{background:#1a1410;}
+
+/* Upload zone */
+.upload-zone{
+  border:2px dashed #2d1c12;border-radius:var(--rad-lg);padding:28px;text-align:center;
+  cursor:pointer;background:#0f0f0f;transition:all .18s;
+}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--t5);background:#1a1410;}
+.uz-icon{font-size:1.8rem;margin-bottom:8px;}
+.uz-title{font-size:.85rem;font-weight:600;color:var(--t2);margin-bottom:4px;}
+.uz-sub{font-size:.75rem;color:#5a4030;}
+.file-chip{
+  display:inline-flex;align-items:center;gap:8px;background:#2d1c12;
+  border-radius:20px;padding:5px 12px;font-size:.75rem;color:var(--t2);margin-top:8px;
+}
+.fc-remove{color:var(--r4);cursor:pointer;font-weight:700;margin-left:4px;}
+
+/* Thresholds */
+.threshold-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #1f1510;}
+.threshold-row:last-child{border-bottom:none;}
+.tr-name{font-size:.8rem;color:#d9a882;flex:1;}
+.tr-op{font-size:.75rem;color:#5a4030;width:20px;text-align:center;}
+.tr-input{width:80px!important;}
+.tr-unit{font-size:.75rem;color:#5a4030;width:28px;}
+
+/* Btn */
+.btn-primary{
+  padding:11px 24px;border-radius:var(--rad);background:linear-gradient(135deg,var(--t5),var(--t7));
+  color:#fff;border:none;font-family:'Outfit',sans-serif;font-size:.88rem;font-weight:600;
+  cursor:pointer;transition:all .18s;box-shadow:0 3px 16px rgba(139,86,53,.3);
+}
+.btn-primary:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 6px 24px rgba(139,86,53,.4);}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed;}
+.btn-secondary{
+  padding:11px 20px;border-radius:var(--rad);background:transparent;
+  color:var(--t2);border:1px solid #4a2e1e;font-family:'Outfit',sans-serif;
+  font-size:.88rem;font-weight:500;cursor:pointer;transition:all .18s;
+}
+.btn-secondary:hover{background:#1f1510;border-color:var(--t4);}
+
+/* ══ DASHBOARD ══ */
+.section-title{
+  font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:700;color:var(--t2);
+  margin-bottom:16px;display:flex;align-items:center;gap:10px;
+}
+.section-title small{font-family:'Outfit',sans-serif;font-size:.72rem;font-weight:400;color:#5a4030;}
+
+/* KPI strip */
+.kpi-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px;}
+.kpi-card{
+  background:#1a1410;border:1px solid #2d1c12;border-radius:var(--rad);
+  padding:16px;position:relative;overflow:hidden;
+}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;}
+.kpi-green::before{background:linear-gradient(90deg,var(--s4),var(--s5));}
+.kpi-yellow::before{background:linear-gradient(90deg,var(--w4),var(--w5));}
+.kpi-red::before{background:linear-gradient(90deg,var(--r4),var(--r5));}
+.kpi-blue::before{background:linear-gradient(90deg,var(--b4),var(--b5));}
+.kpi-label{font-size:.68rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:#5a4030;margin-bottom:6px;}
+.kpi-value{font-family:'Playfair Display',serif;font-size:1.6rem;font-weight:700;line-height:1;}
+.kpi-green .kpi-value{color:#3dc47c;}
+.kpi-yellow .kpi-value{color:#f0c060;}
+.kpi-red .kpi-value{color:#f08080;}
+.kpi-blue .kpi-value{color:#6a96d4;}
+.kpi-sub{font-size:.7rem;color:#5a4030;margin-top:5px;}
+.kpi-delta{font-size:.72rem;padding:2px 7px;border-radius:10px;display:inline-block;margin-top:5px;}
+.delta-up{background:rgba(45,158,98,.15);color:#3dc47c;}
+.delta-down{background:rgba(196,50,50,.15);color:#f08080;}
+.delta-flat{background:rgba(90,64,48,.3);color:#9e8870;}
+
+/* Projects table */
+.table-card{
+  background:#1a1410;border:1px solid #2d1c12;border-radius:var(--rad-lg);
+  overflow:hidden;margin-bottom:20px;
+}
+.tc-header{
+  padding:14px 20px;border-bottom:1px solid #2d1c12;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.tc-title{font-size:.85rem;font-weight:600;color:var(--t2);}
+.tc-actions{display:flex;gap:8px;}
+.tc-btn{
+  font-size:.72rem;padding:5px 12px;border-radius:20px;border:1px solid #2d1c12;
+  background:transparent;color:#9e8870;cursor:pointer;transition:all .15s;
+}
+.tc-btn:hover{border-color:var(--t4);color:var(--t2);}
+table{width:100%;border-collapse:collapse;}
+th{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;
+  color:#5a4030;padding:10px 16px;text-align:left;border-bottom:1px solid #2d1c12;}
+td{padding:11px 16px;font-size:.8rem;color:#c4a882;border-bottom:1px solid #1a1410;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:#1f1510;}
+.semaforo{
+  width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:.7rem;font-weight:700;
+}
+.sem-green{background:rgba(45,158,98,.2);color:#3dc47c;border:1px solid rgba(45,158,98,.3);}
+.sem-yellow{background:rgba(196,154,26,.2);color:#f0c060;border:1px solid rgba(196,154,26,.3);}
+.sem-red{background:rgba(196,50,50,.2);color:#f08080;border:1px solid rgba(196,50,50,.3);}
+.deviation-bar{display:flex;align-items:center;gap:8px;}
+.dev-track{width:80px;height:6px;background:#0f0f0f;border-radius:100px;overflow:hidden;}
+.dev-fill{height:100%;border-radius:100px;}
+.dev-good{background:linear-gradient(90deg,var(--s4),var(--s5));}
+.dev-warn{background:linear-gradient(90deg,var(--w4),var(--w5));}
+.dev-bad {background:linear-gradient(90deg,var(--r4),var(--r5));}
+.dev-pct{font-size:.75rem;font-weight:600;}
+
+/* Alerts feed */
+.alerts-feed{background:#1a1410;border:1px solid #2d1c12;border-radius:var(--rad-lg);overflow:hidden;margin-bottom:20px;}
+.alert-item{
+  display:flex;gap:14px;padding:14px 18px;border-bottom:1px solid #1a1410;
+  align-items:flex-start;transition:background .15s;
+}
+.alert-item:last-child{border-bottom:none;}
+.alert-item:hover{background:#1f1510;}
+.alert-item.unread{border-left:3px solid;}
+.ai-red.unread{border-left-color:var(--r4);}
+.ai-yellow.unread{border-left-color:var(--w4);}
+.ai-green.unread{border-left-color:var(--s4);}
+.ai-blue.unread{border-left-color:var(--b4);}
+.alert-icon{font-size:1.1rem;width:32px;height:32px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;font-style:normal;}
+.aic-red{background:rgba(196,50,50,.15);}
+.aic-yellow{background:rgba(196,154,26,.15);}
+.aic-green{background:rgba(45,158,98,.1);}
+.aic-blue{background:rgba(58,110,181,.15);}
+.alert-body{flex:1;}
+.alert-title{font-size:.82rem;font-weight:600;color:#ecd3bb;margin-bottom:3px;}
+.alert-desc{font-size:.76rem;color:#9e8870;line-height:1.5;}
+.alert-meta{font-size:.68rem;color:#5a4030;margin-top:5px;display:flex;gap:12px;}
+.alert-actions{display:flex;gap:6px;flex-direction:column;align-items:flex-end;flex-shrink:0;}
+.btn-wa{font-size:.68rem;padding:4px 10px;border-radius:14px;border:none;cursor:pointer;
+  background:rgba(37,211,102,.15);color:#25d366;font-family:'Outfit',sans-serif;transition:background .15s;}
+.btn-wa:hover{background:rgba(37,211,102,.25);}
+.btn-em{font-size:.68rem;padding:4px 10px;border-radius:14px;border:none;cursor:pointer;
+  background:rgba(58,110,181,.15);color:#6a96d4;font-family:'Outfit',sans-serif;transition:background .15s;}
+.btn-em:hover{background:rgba(58,110,181,.25);}
+.btn-dismiss{font-size:.68rem;padding:4px 10px;border-radius:14px;border:1px solid #2d1c12;cursor:pointer;
+  background:transparent;color:#5a4030;font-family:'Outfit',sans-serif;transition:all .15s;}
+.btn-dismiss:hover{border-color:#4a2e1e;color:#9e8870;}
+
+/* ══ MONITOREO PANEL ══ */
+.agent-run-card{
+  background:#1a1410;border:1px solid #2d1c12;border-radius:var(--rad-xl);
+  padding:24px;margin-bottom:20px;
+}
+.arc-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;}
+.arc-title{font-size:.92rem;font-weight:600;color:var(--t2);}
+.arc-status{font-size:.72rem;padding:4px 12px;border-radius:20px;}
+.status-ready{background:rgba(45,158,98,.1);color:#3dc47c;border:1px solid rgba(45,158,98,.2);}
+.status-running{background:rgba(196,154,26,.1);color:#f0c060;border:1px solid rgba(196,154,26,.2);}
+.status-done{background:rgba(58,110,181,.1);color:#6a96d4;border:1px solid rgba(58,110,181,.2);}
+
+.data-sources{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px;}
+.ds-card{
+  background:#0f0f0f;border:1px solid #2d1c12;border-radius:var(--rad);
+  padding:14px;cursor:pointer;transition:all .18s;
+  display:flex;flex-direction:column;gap:8px;
+}
+.ds-card.loaded{border-color:var(--s5);}
+.ds-card:hover{border-color:var(--t5);}
+.ds-top{display:flex;align-items:center;gap:10px;}
+.ds-icon{font-size:1.2rem;width:34px;height:34px;border-radius:8px;
+  background:#1a1410;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.ds-name{font-size:.8rem;font-weight:600;color:var(--t2);}
+.ds-sub{font-size:.7rem;color:#5a4030;}
+.ds-state{font-size:.68rem;padding:2px 8px;border-radius:10px;display:inline-block;width:fit-content;}
+.dss-empty{background:#1a1410;color:#5a4030;}
+.dss-loaded{background:rgba(45,158,98,.12);color:#3dc47c;}
+.dss-loading{background:rgba(196,154,26,.12);color:#f0c060;}
+
+.agent-controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+.select-agent{padding:9px 14px;border-radius:var(--rad);border:1px solid #2d1c12;background:#0f0f0f;
+  color:var(--t2);font-family:'Outfit',sans-serif;font-size:.83rem;flex:1;min-width:180px;}
+.select-agent option{background:#1a1410;}
+
+/* ══ STREAMING OUTPUT ══ */
+.stream-card{
+  background:#0a0806;border:1px solid #2d1c12;border-radius:var(--rad-lg);
+  padding:20px;font-family:monospace;font-size:.78rem;line-height:1.7;color:#c4a882;
+  min-height:120px;max-height:400px;overflow-y:auto;margin-top:16px;
+  display:none;position:relative;
+}
+.stream-card.show{display:block;}
+.stream-cursor{display:inline-block;width:8px;height:14px;background:var(--t3);animation:cur .7s infinite;vertical-align:text-bottom;}
+@keyframes cur{0%,100%{opacity:1;}50%{opacity:0;}}
+.stream-section{color:var(--t3);font-weight:700;display:block;margin-top:12px;margin-bottom:4px;}
+.stream-alert-line{color:#f08080;}
+.stream-ok-line{color:#3dc47c;}
+.stream-info-line{color:#6a96d4;}
+
+/* ══ REPORTE SEMANAL ══ */
+.reporte-card{
+  background:#1a1410;border:1px solid #2d1c12;border-radius:var(--rad-xl);
+  padding:28px;margin-bottom:20px;
+}
+.rep-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding-bottom:16px;border-bottom:1px solid #2d1c12;margin-bottom:20px;
+}
+.rep-title{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:700;color:var(--t2);}
+.rep-period{font-size:.75rem;color:#5a4030;}
+.rep-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;}
+.rep-kpi{background:#0f0f0f;border-radius:var(--rad);padding:14px;}
+.rep-kpi-label{font-size:.68rem;color:#5a4030;text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px;}
+.rep-kpi-val{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:700;}
+.rep-kpi-delta{font-size:.72rem;margin-top:3px;}
+.rep-section{margin-bottom:16px;}
+.rep-sec-title{font-size:.8rem;font-weight:700;color:var(--t2);margin-bottom:10px;text-transform:uppercase;letter-spacing:.06em;}
+.rep-row{display:flex;justify-content:space-between;font-size:.8rem;padding:6px 0;border-bottom:1px solid #1a1410;color:#c4a882;}
+.rep-row:last-child{border-bottom:none;}
+.rep-highlight{color:#ecd3bb;font-weight:600;}
+.rep-warn{color:#f0c060;}
+.rep-danger{color:#f08080;}
+.rep-good{color:#3dc47c;}
+
+/* ══ NOTIF MODAL ══ */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;
+  display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px);
+}
+.modal-overlay.show{display:flex;}
+.modal{
+  background:#1a1410;border:1px solid #4a2e1e;border-radius:var(--rad-xl);
+  padding:28px;max-width:500px;width:calc(100% - 40px);
+}
+.modal-title{font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:700;color:var(--t2);margin-bottom:6px;}
+.modal-sub{font-size:.8rem;color:#5a4030;margin-bottom:20px;}
+.channel-card{
+  background:#0f0f0f;border:1px solid #2d1c12;border-radius:var(--rad);
+  padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:14px;
+}
+.channel-icon{font-size:1.4rem;}
+.channel-name{font-size:.85rem;font-weight:600;color:var(--t2);}
+.channel-dest{font-size:.75rem;color:#5a4030;}
+.channel-status{margin-left:auto;font-size:.72rem;padding:3px 10px;border-radius:20px;}
+.cs-sent{background:rgba(45,158,98,.15);color:#3dc47c;}
+.cs-pending{background:rgba(196,154,26,.1);color:#f0c060;}
+.modal-btns{display:flex;gap:10px;margin-top:18px;}
+.modal-close{flex:1;padding:10px;border-radius:var(--rad);background:transparent;
+  border:1px solid #4a2e1e;color:#9e8870;cursor:pointer;font-family:'Outfit',sans-serif;font-size:.85rem;}
+.modal-close:hover{background:#2d1c12;}
+
+/* ══ LOADING SPINNER ══ */
+.spinner{
+  width:20px;height:20px;border-radius:50%;border:2px solid rgba(255,255,255,.15);
+  border-top-color:var(--t3);animation:spin .7s linear infinite;flex-shrink:0;
+}
+@keyframes spin{to{transform:rotate(360deg);}}
+.loading-inline{display:flex;align-items:center;gap:10px;font-size:.82rem;color:#9e8870;padding:12px 0;}
+
+/* ══ EMPTY STATE ══ */
+.empty-state{text-align:center;padding:60px 20px;}
+.es-icon{font-size:3rem;margin-bottom:12px;}
+.es-title{font-size:.95rem;font-weight:600;color:var(--t2);margin-bottom:6px;}
+.es-sub{font-size:.8rem;color:#5a4030;max-width:320px;margin:0 auto 20px;}
+
+/* ══ GRID 2 ══ */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+
+/* ══ SCROLL THIN ══ */
+::-webkit-scrollbar{width:5px;}
+::-webkit-scrollbar-track{background:#0f0f0f;}
+::-webkit-scrollbar-thumb{background:#2d1c12;border-radius:10px;}
+::-webkit-scrollbar-thumb:hover{background:#4a2e1e;}
+
+/* ══ TAGS ══ */
+.tag{font-size:.68rem;padding:2px 8px;border-radius:10px;font-weight:600;}
+.tag-red{background:rgba(196,50,50,.2);color:#f08080;}
+.tag-yellow{background:rgba(196,154,26,.2);color:#f0c060;}
+.tag-green{background:rgba(45,158,98,.15);color:#3dc47c;}
+.tag-blue{background:rgba(58,110,181,.15);color:#6a96d4;}
+
+/* ══ NOTIFICATION TOAST ══ */
+.toast-container{position:fixed;bottom:24px;right:24px;z-index:2000;display:flex;flex-direction:column;gap:8px;}
+.toast{
+  background:#1a1410;border:1px solid #4a2e1e;border-radius:var(--rad-lg);
+  padding:14px 18px;min-width:280px;max-width:360px;
+  display:flex;align-items:flex-start;gap:12px;
+  animation:slideIn .3s ease;box-shadow:0 8px 32px rgba(0,0,0,.5);
+}
+@keyframes slideIn{from{opacity:0;transform:translateX(30px);}to{opacity:1;transform:translateX(0);}}
+.toast.removing{animation:slideOut .3s ease forwards;}
+@keyframes slideOut{to{opacity:0;transform:translateX(30px);}}
+.toast-icon{font-size:1.1rem;flex-shrink:0;}
+.toast-title{font-size:.82rem;font-weight:600;color:var(--t2);margin-bottom:2px;}
+.toast-body{font-size:.75rem;color:#9e8870;}
+
+@media(max-width:900px){
+  .sidebar{display:none;}
+  .kpi-strip,.data-sources{grid-template-columns:1fr 1fr;}
+  .config-grid,.grid2{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<!-- ══ TOPBAR ══ -->
+<div class="topbar">
+  <div class="topbar-logo">Obra<span>Docs</span> <span style="font-family:'Outfit',sans-serif;font-size:.7rem;font-weight:400;color:#5a4030;margin-left:6px;">Agente de Monitoreo y Acción</span></div>
+  <div class="topbar-center">
+    <button class="nav-btn active" onclick="showPanel('dashboard',this)">Dashboard</button>
+    <button class="nav-btn" onclick="showPanel('monitoreo',this)">Monitoreo</button>
+    <button class="nav-btn" onclick="showPanel('reporte',this)">Reporte Semanal</button>
+    <button class="nav-btn" onclick="showPanel('config',this)">Configuración</button>
+  </div>
+  <div class="topbar-right">
+    <div class="alert-badge" onclick="showPanel('dashboard',document.querySelectorAll(\'.nav-btn\')[0])">
+      🔔
+      <div class="alert-count" id="alert-count-badge">3</div>
+    </div>
+    <div class="status-pill status-live"><span class="status-dot"></span>En vivo</div>
+  </div>
+</div>
+
+<div class="main">
+
+<!-- ══ SIDEBAR ══ -->
+<div class="sidebar">
+  <div class="sidebar-section">
+    <div class="sidebar-label">Proyectos Activos</div>
+    <div class="sidebar-item active"><span class="si-icon">🏗️</span> Torre Cumbres <span class="si-badge badge-yellow">⚠</span></div>
+    <div class="sidebar-item"><span class="si-icon">🏗️</span> Plaza Norte <span class="si-badge badge-green">✓</span></div>
+    <div class="sidebar-item"><span class="si-icon">🏗️</span> Bodega Ind. 4 <span class="si-badge badge-green">✓</span></div>
+    <div class="sidebar-item"><span class="si-icon">🏗️</span> Resi. Bosques <span class="si-badge badge-red">!</span></div>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-label">Ventas SaaS</div>
+    <div class="sidebar-item"><span class="si-icon">💼</span> Pipeline activo</div>
+    <div class="sidebar-item"><span class="si-icon">📊</span> Cuota mensual</div>
+    <div class="sidebar-item"><span class="si-icon">🔄</span> Renovaciones</div>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-label">Corretaje</div>
+    <div class="sidebar-item"><span class="si-icon">🏘️</span> Inventario <span class="si-badge badge-yellow">12</span></div>
+    <div class="sidebar-item"><span class="si-icon">📝</span> Escrituración</div>
+    <div class="sidebar-item"><span class="si-icon">💰</span> Comisiones</div>
+  </div>
+</div>
+
+<!-- ══ CONTENT ══ -->
+<div class="content">
+
+  <!-- ── DASHBOARD ── -->
+  <div class="panel active" id="panel-dashboard">
+    <div class="section-title">Dashboard General <small>Actualizado hace 8 min</small></div>
+
+    <div class="kpi-strip">
+      <div class="kpi-card kpi-yellow">
+        <div class="kpi-label">Proyectos con alerta</div>
+        <div class="kpi-value">2</div>
+        <div class="kpi-sub">De 4 proyectos activos</div>
+        <span class="kpi-delta delta-down">↑ 1 vs semana anterior</span>
+      </div>
+      <div class="kpi-card kpi-green">
+        <div class="kpi-label">Ventas del producto</div>
+        <div class="kpi-value">78%</div>
+        <div class="kpi-sub">Cuota mensual cubierta</div>
+        <span class="kpi-delta delta-up">↑ 12% vs meta</span>
+      </div>
+      <div class="kpi-card kpi-blue">
+        <div class="kpi-label">Unidades en corretaje</div>
+        <div class="kpi-value">38</div>
+        <div class="kpi-sub">Disponibles de 50</div>
+        <span class="kpi-delta delta-flat">→ Sin cambio</span>
+      </div>
+      <div class="kpi-card kpi-red">
+        <div class="kpi-label">Alertas activas</div>
+        <div class="kpi-value" id="total-alerts-kpi">3</div>
+        <div class="kpi-sub">Requieren atención</div>
+        <span class="kpi-delta delta-down">↑ 1 nueva hoy</span>
+      </div>
+    </div>
+
+    <!-- Projects table -->
+    <div class="table-card">
+      <div class="tc-header">
+        <span class="tc-title">🏗️ Proyectos de Obra — Estado Semanal</span>
+        <div class="tc-actions">
+          <button class="tc-btn" onclick="showPanel('monitoreo',document.querySelectorAll('.nav-btn')[1])">Analizar con IA →</button>
+        </div>
+      </div>
+      <table id="projects-table">
+        <thead>
+          <tr>
+            <th>Proyecto</th>
+            <th>Avance Físico</th>
+            <th>Desviación Costo</th>
+            <th>Costo/m²</th>
+            <th>Margen Est.</th>
+            <th>Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong style="color:#ecd3bb">Torre Cumbres</strong><br><small style="color:#5a4030">Res. 120 deptos</small></td>
+            <td>78%</td>
+            <td><div class="deviation-bar"><div class="dev-track"><div class="dev-fill dev-warn" style="width:42%"></div></div><span class="dev-pct" style="color:#f0c060">+4.2%</span></div></td>
+            <td style="color:#f0c060">$19,180</td>
+            <td style="color:#f0c060">16.8%</td>
+            <td><div class="semaforo sem-yellow">⚠</div></td>
+          </tr>
+          <tr>
+            <td><strong style="color:#ecd3bb">Plaza Norte</strong><br><small style="color:#5a4030">Comercial 3,200m²</small></td>
+            <td>55%</td>
+            <td><div class="deviation-bar"><div class="dev-track"><div class="dev-fill dev-good" style="width:15%"></div></div><span class="dev-pct" style="color:#3dc47c">+1.5%</span></div></td>
+            <td style="color:#3dc47c">$22,400</td>
+            <td style="color:#3dc47c">22.1%</td>
+            <td><div class="semaforo sem-green">✓</div></td>
+          </tr>
+          <tr>
+            <td><strong style="color:#ecd3bb">Bodega Ind. 4</strong><br><small style="color:#5a4030">Industrial 8,000m²</small></td>
+            <td>92%</td>
+            <td><div class="deviation-bar"><div class="dev-track"><div class="dev-fill dev-good" style="width:8%"></div></div><span class="dev-pct" style="color:#3dc47c">+0.8%</span></div></td>
+            <td style="color:#3dc47c">$14,200</td>
+            <td style="color:#3dc47c">28.4%</td>
+            <td><div class="semaforo sem-green">✓</div></td>
+          </tr>
+          <tr>
+            <td><strong style="color:#ecd3bb">Resi. Bosques</strong><br><small style="color:#5a4030">Res. 48 casas</small></td>
+            <td>41%</td>
+            <td><div class="deviation-bar"><div class="dev-track"><div class="dev-fill dev-bad" style="width:82%"></div></div><span class="dev-pct" style="color:#f08080">+8.2%</span></div></td>
+            <td style="color:#f08080">$28,600</td>
+            <td style="color:#f08080">9.1%</td>
+            <td><div class="semaforo sem-red">!</div></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Alerts feed -->
+    <div class="section-title">🔔 Alertas Activas <small id="alerts-count-txt">3 sin leer</small></div>
+    <div class="alerts-feed" id="alerts-feed">
+      <div class="alert-item ai-red unread" id="alert-1">
+        <div class="alert-icon aic-red">🚨</div>
+        <div class="alert-body">
+          <div class="alert-title">Resi. Bosques — Desviación crítica de costo +8.2%</div>
+          <div class="alert-desc">El costo por m² subió a $28,600 vs $26,400 presupuestado. Partida de estructura metálica con sobrecosto de $380K. El margen neto estimado bajó a 9.1%, límite de viabilidad.</div>
+          <div class="alert-meta"><span>Obra</span><span>Hoy 09:14</span><span class="tag tag-red">Alto</span></div>
+        </div>
+        <div class="alert-actions">
+          <button class="btn-wa" onclick="sendAlert(1,'wa')">📱 WhatsApp</button>
+          <button class="btn-em" onclick="sendAlert(1,'email')">✉️ Email</button>
+          <button class="btn-dismiss" onclick="dismissAlert(1)">Resolver</button>
+        </div>
+      </div>
+      <div class="alert-item ai-yellow unread" id="alert-2">
+        <div class="alert-icon aic-yellow">⚠️</div>
+        <div class="alert-body">
+          <div class="alert-title">Torre Cumbres — Avance financiero 5% por debajo del físico</div>
+          <div class="alert-desc">Se están pagando estimaciones antes del avance físico correspondiente. Riesgo de pagar sin avance equivalente en 2 frentes de trabajo.</div>
+          <div class="alert-meta"><span>Obra</span><span>Ayer 16:30</span><span class="tag tag-yellow">Medio</span></div>
+        </div>
+        <div class="alert-actions">
+          <button class="btn-wa" onclick="sendAlert(2,'wa')">📱 WhatsApp</button>
+          <button class="btn-em" onclick="sendAlert(2,'email')">✉️ Email</button>
+          <button class="btn-dismiss" onclick="dismissAlert(2)">Resolver</button>
+        </div>
+      </div>
+      <div class="alert-item ai-blue unread" id="alert-3">
+        <div class="alert-icon aic-blue">📊</div>
+        <div class="alert-body">
+          <div class="alert-title">Ventas — 3 deals sin actividad por más de 14 días</div>
+          <div class="alert-desc">Pipeline: Constructora López ($48K ARR), Grupo Inmobiliario del Norte ($36K ARR) y Desarrollos Sonora ($28K ARR) sin seguimiento desde hace 15, 17 y 21 días respectivamente.</div>
+          <div class="alert-meta"><span>Ventas</span><span>Hace 2 días</span><span class="tag tag-blue">Seguimiento</span></div>
+        </div>
+        <div class="alert-actions">
+          <button class="btn-wa" onclick="sendAlert(3,'wa')">📱 WhatsApp</button>
+          <button class="btn-em" onclick="sendAlert(3,'email')">✉️ Email</button>
+          <button class="btn-dismiss" onclick="dismissAlert(3)">Resolver</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── MONITOREO ── -->
+  <div class="panel" id="panel-monitoreo">
+    <div class="section-title">🧠 Agente de Monitoreo y Acción</div>
+
+    <div class="agent-run-card">
+      <div class="arc-header">
+        <div>
+          <div class="arc-title">Fuentes de Datos</div>
+          <div style="font-size:.72rem;color:#5a4030;margin-top:3px;">Carga los archivos para que el agente los analice</div>
+        </div>
+        <div class="arc-status status-ready" id="agent-status-pill">Listo</div>
+      </div>
+
+      <div class="data-sources">
+        <!-- Obra -->
+        <div class="ds-card" id="ds-obra" onclick="triggerUpload('obra')">
+          <div class="ds-top">
+            <div class="ds-icon">🏗️</div>
+            <div>
+              <div class="ds-name">Proyectos de Obra</div>
+              <div class="ds-sub">Excel de avances y costos</div>
+            </div>
+          </div>
+          <div class="ds-state dss-empty" id="ds-obra-state">Sin cargar</div>
+          <div class="ds-filename" id="ds-obra-file" style="font-size:.7rem;color:#5a4030;display:none;"></div>
+        </div>
+        <!-- Ventas -->
+        <div class="ds-card" id="ds-ventas" onclick="triggerUpload('ventas')">
+          <div class="ds-top">
+            <div class="ds-icon">💼</div>
+            <div>
+              <div class="ds-name">CRM de Ventas</div>
+              <div class="ds-sub">HubSpot export / Excel CRM</div>
+            </div>
+          </div>
+          <div class="ds-state dss-empty" id="ds-ventas-state">Sin cargar</div>
+          <div class="ds-filename" id="ds-ventas-file" style="font-size:.7rem;color:#5a4030;display:none;"></div>
+        </div>
+        <!-- Corretaje -->
+        <div class="ds-card" id="ds-corretaje" onclick="triggerUpload('corretaje')">
+          <div class="ds-top">
+            <div class="ds-icon">🏘️</div>
+            <div>
+              <div class="ds-name">Corretaje / Inventario</div>
+              <div class="ds-sub">Excel inventario y ventas</div>
+            </div>
+          </div>
+          <div class="ds-state dss-empty" id="ds-corretaje-state">Sin cargar</div>
+          <div class="ds-filename" id="ds-corretaje-file" style="font-size:.7rem;color:#5a4030;display:none;"></div>
+        </div>
+      </div>
+
+      <input type="file" id="upload-obra" style="display:none" accept=".xlsx,.xls,.csv,.txt" onchange="handleDS('obra',event)">
+      <input type="file" id="upload-ventas" style="display:none" accept=".xlsx,.xls,.csv,.txt" onchange="handleDS('ventas',event)">
+      <input type="file" id="upload-corretaje" style="display:none" accept=".xlsx,.xls,.csv,.txt" onchange="handleDS('corretaje',event)">
+
+      <div style="margin-bottom:16px;">
+        <div class="flabel" style="margin-bottom:8px;">Contexto adicional para el agente (opcional)</div>
+        <textarea class="finput" id="agent-context" style="min-height:70px;resize:vertical;font-size:.8rem;" placeholder="Ej: Semana 15 del año. Hay un aumento de acero del 12% este mes. El cliente Torre Cumbres tiene reunión de obra el jueves..."></textarea>
+      </div>
+
+      <div class="agent-controls">
+        <select class="select-agent" id="agent-type">
+          <option value="monitoreo_completo">🔍 Monitoreo Completo (todos los módulos)</option>
+          <option value="solo_obra">🏗️ Solo Proyectos de Obra</option>
+          <option value="solo_ventas">💼 Solo Ventas del Producto</option>
+          <option value="solo_corretaje">🏘️ Solo Corretaje e Inventario</option>
+          <option value="reporte_semanal">📋 Generar Reporte Semanal</option>
+          <option value="alertas_criticas">🚨 Detectar Alertas Críticas</option>
+        </select>
+        <button class="btn-primary" id="btn-run-agent" onclick="runAgent()">
+          ▶ Ejecutar Agente
+        </button>
+        <button class="btn-secondary" onclick="clearStream()">Limpiar</button>
+      </div>
+
+      <div class="stream-card" id="stream-output"></div>
+    </div>
+  </div>
+
+  <!-- ── REPORTE SEMANAL ── -->
+  <div class="panel" id="panel-reporte">
+    <div class="section-title">📋 Reporte Semanal Ejecutivo</div>
+
+    <div class="reporte-card" id="reporte-content">
+      <div class="rep-header">
+        <div>
+          <div class="rep-title">Reporte Semanal — ObraDocs</div>
+          <div class="rep-period" id="rep-period-txt">Semana 15 · Generado por Agente de Monitoreo</div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn-secondary" style="font-size:.78rem;padding:8px 16px;" onclick="generateWeeklyReport()">🔄 Re-generar con IA</button>
+          <button class="btn-secondary" style="font-size:.78rem;padding:8px 16px;" onclick="window.print()">🖨️ Imprimir</button>
+        </div>
+      </div>
+
+      <div id="reporte-body">
+        <div class="rep-kpis">
+          <div class="rep-kpi">
+            <div class="rep-kpi-label">Proyectos activos</div>
+            <div class="rep-kpi-val" style="color:#6a96d4">4</div>
+            <div class="rep-kpi-delta" style="color:#3dc47c">$186M en proceso</div>
+          </div>
+          <div class="rep-kpi">
+            <div class="rep-kpi-label">Alertas generadas</div>
+            <div class="rep-kpi-val" style="color:#f08080">3</div>
+            <div class="rep-kpi-delta" style="color:#f0c060">1 crítica · 1 media · 1 info</div>
+          </div>
+          <div class="rep-kpi">
+            <div class="rep-kpi-label">Ventas SaaS (mes)</div>
+            <div class="rep-kpi-val" style="color:#3dc47c">78%</div>
+            <div class="rep-kpi-delta" style="color:#3dc47c">↑ 12% vs meta</div>
+          </div>
+        </div>
+
+        <div class="rep-section">
+          <div class="rep-sec-title">Estado de Proyectos</div>
+          <div class="rep-row"><span>Torre Cumbres</span><span class="rep-warn">⚠ Desviación +4.2% — Revisar partida metálica</span></div>
+          <div class="rep-row"><span>Plaza Norte</span><span class="rep-good">✓ En tiempo y costo</span></div>
+          <div class="rep-row"><span>Bodega Industrial 4</span><span class="rep-good">✓ Por concluir — avance 92%</span></div>
+          <div class="rep-row"><span>Resi. Bosques</span><span class="rep-danger">🚨 Desviación +8.2% — Acción inmediata</span></div>
+        </div>
+
+        <div class="rep-section">
+          <div class="rep-sec-title">Pipeline de Ventas</div>
+          <div class="rep-row"><span>Deals activos en pipeline</span><span class="rep-highlight">14 deals · $320K ARR potencial</span></div>
+          <div class="rep-row"><span>Deals sin actividad +14 días</span><span class="rep-warn">3 deals · $112K ARR en riesgo</span></div>
+          <div class="rep-row"><span>Cierres esperados este mes</span><span class="rep-good">4 deals · ~$88K ARR</span></div>
+        </div>
+
+        <div class="rep-section">
+          <div class="rep-sec-title">Corretaje e Inventario</div>
+          <div class="rep-row"><span>Unidades disponibles</span><span class="rep-highlight">38 de 50</span></div>
+          <div class="rep-row"><span>Velocidad de absorción semanal</span><span class="rep-warn">1.8 u/sem vs 2.5 planeada</span></div>
+          <div class="rep-row"><span>Comisiones por cobrar</span><span class="rep-highlight">$420,000 MXN</span></div>
+        </div>
+
+        <div style="margin-top:16px;padding:16px;background:#0a0806;border-radius:var(--rad);border:1px solid #2d1c12;">
+          <div style="font-size:.72rem;color:#5a4030;margin-bottom:8px;text-transform:uppercase;letter-spacing:.07em;">Síntesis del Agente</div>
+          <div id="rep-ai-summary" style="font-size:.82rem;color:#c4a882;line-height:1.7;">La semana cierra con alertas operativas relevantes. Resi. Bosques requiere intervención directa en la partida de estructura metálica para evitar que el margen caiga por debajo del 8% de umbral. Torre Cumbres presenta riesgo de adelanto de pagos sin avance físico correspondiente. En ventas, los 3 deals inactivos representan $112K ARR en riesgo y requieren seguimiento esta semana. Corretaje muestra absorción por debajo del plan.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── CONFIG ── -->
+  <div class="panel" id="panel-config">
+    <div class="section-title">⚙️ Configuración del Agente</div>
+
+    <div class="config-grid">
+      <div class="config-card">
+        <div class="cc-title"><span>🤖</span> Claude API</div>
+        <div class="fgroup">
+          <label class="flabel">API Key de Anthropic</label>
+          <input class="finput" id="api-key" type="password" placeholder="sk-ant-api03-...">
+          <span class="fhint">Obtén tu key en console.anthropic.com</span>
+        </div>
+        <div class="fgroup">
+          <label class="flabel">Modelo</label>
+          <select class="fselect" id="model-select">
+            <option value="claude-sonnet-4-20250514" selected>Claude Sonnet 4 (recomendado)</option>
+            <option value="claude-opus-4-5-20251101">Claude Opus 4.5 (más potente)</option>
+            <option value="claude-haiku-4-5-20251001">Claude Haiku 4.5 (más rápido)</option>
+          </select>
+        </div>
+        <button class="btn-primary" style="width:100%;margin-top:4px;" onclick="saveConfig()">Guardar Configuración</button>
+      </div>
+
+      <div class="config-card">
+        <div class="cc-title"><span>🔔</span> Canales de Alerta</div>
+        <div class="fgroup">
+          <label class="flabel">Teléfono WhatsApp (destinatario)</label>
+          <input class="finput" id="wa-phone" placeholder="+52 664 123 4567">
+          <span class="fhint">Se usará la API de WhatsApp Business o Twilio</span>
+        </div>
+        <div class="fgroup">
+          <label class="flabel">Email del director / receptor</label>
+          <input class="finput" id="email-dest" placeholder="director@empresa.com">
+        </div>
+        <div class="fgroup">
+          <label class="flabel">Nombre del receptor</label>
+          <input class="finput" id="contact-name" placeholder="Ing. Marco García">
+        </div>
+      </div>
+
+      <div class="config-card">
+        <div class="cc-title"><span>⚠️</span> Umbrales de Alerta</div>
+        <div class="threshold-row">
+          <span class="tr-name">Desviación de costo obra</span>
+          <span class="tr-op">></span>
+          <input class="finput tr-input" id="thr-costo" type="number" value="5">
+          <span class="tr-unit">%</span>
+        </div>
+        <div class="threshold-row">
+          <span class="tr-name">Margen neto mínimo</span>
+          <span class="tr-op"><</span>
+          <input class="finput tr-input" id="thr-margen" type="number" value="12">
+          <span class="tr-unit">%</span>
+        </div>
+        <div class="threshold-row">
+          <span class="tr-name">Deal sin actividad</span>
+          <span class="tr-op">></span>
+          <input class="finput tr-input" id="thr-deal" type="number" value="14">
+          <span class="tr-unit">días</span>
+        </div>
+        <div class="threshold-row">
+          <span class="tr-name">Absorción corretaje</span>
+          <span class="tr-op"><</span>
+          <input class="finput tr-input" id="thr-absorcion" type="number" value="70">
+          <span class="tr-unit">% plan</span>
+        </div>
+        <div class="threshold-row">
+          <span class="tr-name">Avance físico vs. financiero</span>
+          <span class="tr-op">></span>
+          <input class="finput tr-input" id="thr-curvas" type="number" value="5">
+          <span class="tr-unit">%</span>
+        </div>
+      </div>
+
+      <div class="config-card">
+        <div class="cc-title"><span>🗓️</span> Programación Automática</div>
+        <div class="fgroup">
+          <label class="flabel">Frecuencia del reporte</label>
+          <select class="fselect" id="freq-reporte">
+            <option>Semanal (lunes 8:00am)</option>
+            <option>Quincenal</option>
+            <option>Mensual</option>
+          </select>
+        </div>
+        <div class="fgroup">
+          <label class="flabel">Alertas en tiempo real</label>
+          <select class="fselect" id="freq-alerts">
+            <option>Inmediato al detectar</option>
+            <option>Resumen diario</option>
+            <option>Solo críticas en tiempo real</option>
+          </select>
+        </div>
+        <div style="background:#0a0806;border-radius:8px;padding:12px;margin-top:8px;font-size:.75rem;color:#5a4030;line-height:1.6;">
+          <strong style="color:#9e8870;">Próxima ejecución:</strong><br>
+          Reporte Semanal — Lunes 09 Jun, 8:00am<br>
+          Monitoreo continuo — activo
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- end content -->
+</div><!-- end main -->
+
+<!-- ══ MODAL ══ -->
+<div class="modal-overlay" id="notif-modal">
+  <div class="modal">
+    <div class="modal-title" id="modal-title">Enviando alerta</div>
+    <div class="modal-sub" id="modal-sub">Se está notificando a los responsables</div>
+    <div id="modal-channels"></div>
+    <div class="modal-btns">
+      <button class="modal-close" onclick="closeModal()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TOASTS ══ -->
+<div class="toast-container" id="toast-container"></div>
+
+<script>
+// ══ STATE ══
+var DS = { obra: '', ventas: '', corretaje: '' };
+var DSNames = { obra:'', ventas:'', corretaje:'' };
+var alertCount = 3;
+var config = {
+  apiKey: localStorage.getItem('od_apikey') || '',
+  model: localStorage.getItem('od_model') || 'claude-sonnet-4-20250514',
+  waPhone: localStorage.getItem('od_wa') || '',
+  emailDest: localStorage.getItem('od_email') || '',
+  contactName: localStorage.getItem('od_name') || 'Director',
+  thrCosto: localStorage.getItem('od_thr_costo') || '5',
+  thrMargen: localStorage.getItem('od_thr_margen') || '12',
+  thrDeal: localStorage.getItem('od_thr_deal') || '14',
+  thrAbsorcion: localStorage.getItem('od_thr_absorcion') || '70',
+  thrCurvas: localStorage.getItem('od_thr_curvas') || '5',
+};
+
+// ══ INIT ══
+window.onload = function() {
+  if (config.apiKey) document.getElementById('api-key').value = config.apiKey;
+  if (config.waPhone) document.getElementById('wa-phone').value = config.waPhone;
+  if (config.emailDest) document.getElementById('email-dest').value = config.emailDest;
+  if (config.contactName) document.getElementById('contact-name').value = config.contactName;
+  document.getElementById('thr-costo').value = config.thrCosto;
+  document.getElementById('thr-margen').value = config.thrMargen;
+  document.getElementById('thr-deal').value = config.thrDeal;
+  document.getElementById('thr-absorcion').value = config.thrAbsorcion;
+  document.getElementById('thr-curvas').value = config.thrCurvas;
+  updateRepDate();
+};
+
+function updateRepDate() {
+  var d = new Date();
+  var wk = Math.ceil(d.getDate()/7) + (d.getMonth()*4);
+  document.getElementById('rep-period-txt').textContent = 'Semana ' + wk + ' · Generado por Agente de Monitoreo';
+}
+
+// ══ PANEL NAV ══
+function showPanel(name, el) {
+  document.querySelectorAll('.panel').forEach(function(p){ p.classList.remove('active'); });
+  document.querySelectorAll('.nav-btn').forEach(function(b){ b.classList.remove('active'); });
+  document.getElementById('panel-' + name).classList.add('active');
+  if (el) el.classList.add('active');
+}
+
+// ══ CONFIG SAVE ══
+function saveConfig() {
+  config.apiKey = document.getElementById('api-key').value.trim();
+  config.model = document.getElementById('model-select').value;
+  config.waPhone = document.getElementById('wa-phone').value.trim();
+  config.emailDest = document.getElementById('email-dest').value.trim();
+  config.contactName = document.getElementById('contact-name').value.trim() || 'Director';
+  config.thrCosto = document.getElementById('thr-costo').value;
+  config.thrMargen = document.getElementById('thr-margen').value;
+  config.thrDeal = document.getElementById('thr-deal').value;
+  config.thrAbsorcion = document.getElementById('thr-absorcion').value;
+  config.thrCurvas = document.getElementById('thr-curvas').value;
+  localStorage.setItem('od_apikey', config.apiKey);
+  localStorage.setItem('od_model', config.model);
+  localStorage.setItem('od_wa', config.waPhone);
+  localStorage.setItem('od_email', config.emailDest);
+  localStorage.setItem('od_name', config.contactName);
+  localStorage.setItem('od_thr_costo', config.thrCosto);
+  localStorage.setItem('od_thr_margen', config.thrMargen);
+  localStorage.setItem('od_thr_deal', config.thrDeal);
+  localStorage.setItem('od_thr_absorcion', config.thrAbsorcion);
+  localStorage.setItem('od_thr_curvas', config.thrCurvas);
+  showToast('✅', 'Configuración guardada', 'API Key y umbrales actualizados correctamente');
+}
+
+// ══ FILE UPLOAD ══
+function triggerUpload(type) {
+  document.getElementById('upload-' + type).click();
+}
+
+function handleDS(type, event) {
+  var file = event.target.files[0];
+  if (!file) return;
+  DSNames[type] = file.name;
+  document.getElementById('ds-' + type + '-state').textContent = 'Cargando...';
+  document.getElementById('ds-' + type + '-state').className = 'ds-state dss-loading';
+  var ext = file.name.split('.').pop().toLowerCase();
+  if (ext === 'xlsx' || ext === 'xls') {
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var wb = XLSX.read(e.target.result, { type:'binary' });
+      var text = '';
+      wb.SheetNames.forEach(function(sn) {
+        var csv = XLSX.utils.sheet_to_csv(wb.Sheets[sn], { FS:' | ' });
+        var rows = csv.split('\n').filter(function(r){ return r.replace(/[|,\s]/g,'').length>0; });
+        text += '=== Hoja: ' + sn + ' ===\n' + rows.slice(0,80).join('\n') + '\n\n';
+      });
+      DS[type] = text.substring(0, 4000);
+      markDSLoaded(type, file.name);
+    };
+    reader.readAsBinaryString(file);
+  } else {
+    var reader2 = new FileReader();
+    reader2.onload = function(e) {
+      DS[type] = e.target.result.substring(0, 4000);
+      markDSLoaded(type, file.name);
+    };
+    reader2.readAsText(file);
+  }
+}
+
+function markDSLoaded(type, name) {
+  document.getElementById('ds-' + type + '-state').textContent = '✓ Cargado';
+  document.getElementById('ds-' + type + '-state').className = 'ds-state dss-loaded';
+  document.getElementById('ds-' + type + '-file').textContent = name;
+  document.getElementById('ds-' + type + '-file').style.display = 'block';
+  document.getElementById('ds-' + type).classList.add('loaded');
+  showToast('📂', 'Archivo cargado', name + ' listo para analizar');
+}
+
+// ══ BUILD SYSTEM PROMPT ══
+function buildSystemPrompt() {
+  return `Eres el Agente de Monitoreo y Acción de ObraDocs, experto en control financiero de proyectos inmobiliarios y de construcción en México, con conocimiento profundo de KPIs de obra, ventas SaaS y corretaje inmobiliario.
+
+Tu función principal es:
+1. MONITOREAR datos de proyectos de obra, ventas del producto SaaS y corretaje/inventario inmobiliario
+2. DETECTAR desviaciones, riesgos y oportunidades en los datos
+3. GENERAR alertas priorizadas (Crítica / Media / Baja) con acciones específicas
+4. PRODUCIR reportes ejecutivos claros y accionables
+
+UMBRALES CONFIGURADOS:
+- Desviación de costo en obra: >${config.thrCosto}% → alerta
+- Margen neto mínimo aceptable: <${config.thrMargen}% → alerta crítica
+- Deal de venta sin actividad: >${config.thrDeal} días → seguimiento
+- Absorción de corretaje: <${config.thrAbsorcion}% del plan → alerta
+- Diferencia avance físico vs. financiero: >${config.thrCurvas}% → alerta
+
+Al analizar, presenta tu respuesta en secciones claramente marcadas con:
+[SECCIÓN: nombre] para encabezados
+[ALERTA CRÍTICA] / [ALERTA MEDIA] / [ALERTA BAJA] para alertas
+[OK] para elementos sin problemas
+[ACCIÓN] para recomendaciones específicas
+
+Sé directo, usa números concretos, y da recomendaciones accionables. Responde en español.`;
+}
+
+// ══ BUILD USER PROMPT ══
+function buildUserPrompt() {
+  var agentType = document.getElementById('agent-type').value;
+  var ctx = document.getElementById('agent-context').value;
+  var today = new Date().toLocaleDateString('es-MX', {weekday:'long',year:'numeric',month:'long',day:'numeric'});
+
+  var prompt = 'Fecha de análisis: ' + today + '\n\n';
+  if (ctx) prompt += 'CONTEXTO ADICIONAL: ' + ctx + '\n\n';
+
+  var typeLabels = {
+    monitoreo_completo: 'Monitoreo Completo — analiza todos los módulos disponibles',
+    solo_obra: 'Solo Proyectos de Obra',
+    solo_ventas: 'Solo Ventas del Producto SaaS',
+    solo_corretaje: 'Solo Corretaje e Inventario',
+    reporte_semanal: 'Generar Reporte Semanal Ejecutivo completo',
+    alertas_criticas: 'Detectar SOLO alertas críticas que requieren acción inmediata'
+  };
+  prompt += 'TIPO DE ANÁLISIS: ' + typeLabels[agentType] + '\n\n';
+
+  var hasData = false;
+  if (DS.obra && (agentType === 'monitoreo_completo' || agentType === 'solo_obra' || agentType === 'reporte_semanal' || agentType === 'alertas_criticas')) {
+    prompt += '=== DATOS DE PROYECTOS DE OBRA ===\n' + DS.obra + '\n\n';
+    hasData = true;
+  }
+  if (DS.ventas && (agentType === 'monitoreo_completo' || agentType === 'solo_ventas' || agentType === 'reporte_semanal' || agentType === 'alertas_criticas')) {
+    prompt += '=== DATOS DE CRM DE VENTAS ===\n' + DS.ventas + '\n\n';
+    hasData = true;
+  }
+  if (DS.corretaje && (agentType === 'monitoreo_completo' || agentType === 'solo_corretaje' || agentType === 'reporte_semanal' || agentType === 'alertas_criticas')) {
+    prompt += '=== DATOS DE CORRETAJE / INVENTARIO ===\n' + DS.corretaje + '\n\n';
+    hasData = true;
+  }
+
+  if (!hasData) {
+    prompt += '=== DATOS DE EJEMPLO (NO SE CARGARON ARCHIVOS REALES) ===\n';
+    prompt += 'Proyectos: Torre Cumbres (res. 120 deptos, avance 78%, costo/m² $19,180 vs $18,400 presupuestado, desviación +4.2%, margen 16.8%), Resi. Bosques (res. 48 casas, avance 41%, costo/m² $28,600 vs $26,400, desviación +8.2%, margen 9.1%).\n';
+    prompt += 'Ventas: 14 deals activos, 3 deals sin actividad >14 días (Constructora López $48K, Grupo Norte $36K, Desarrollos Sonora $28K). Cuota mensual 78% alcanzada.\n';
+    prompt += 'Corretaje: 38 unidades disponibles de 50, absorción 1.8 u/sem vs 2.5 planeada, comisiones por cobrar $420,000 MXN.\n';
+  }
+
+  prompt += '\nGenera el análisis completo con alertas priorizadas, KPIs clave y recomendaciones accionables para cada módulo.';
+  return prompt;
+}
+
+// ══ STREAMING AGENT RUN ══
+async function runAgent() {
+  var apiKey = document.getElementById('api-key').value.trim() || config.apiKey;
+  if (!apiKey) {
+    showToast('⚙️','API Key requerida','Ve a Configuración y agrega tu API Key de Anthropic');
+    showPanel('config', document.querySelectorAll('.nav-btn')[3]);
+    return;
+  }
+
+  var btn = document.getElementById('btn-run-agent');
+  btn.disabled = true;
+  btn.textContent = '⏳ Analizando...';
+  document.getElementById('agent-status-pill').textContent = 'Ejecutando';
+  document.getElementById('agent-status-pill').className = 'arc-status status-running';
+
+  var out = document.getElementById('stream-output');
+  out.classList.add('show');
+  out.innerHTML = '<span class="stream-cursor"></span>';
+
+  try {
+    var response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: document.getElementById('model-select').value || 'claude-sonnet-4-20250514',
+        max_tokens: 2000,
+        stream: true,
+        system: buildSystemPrompt(),
+        messages: [{ role: 'user', content: buildUserPrompt() }]
+      })
+    });
+
+    if (!response.ok) {
+      var errData = await response.json();
+      throw new Error(errData.error ? errData.error.message : 'Error ' + response.status);
+    }
+
+    var reader = response.body.getReader();
+    var decoder = new TextDecoder();
+    var fullText = '';
+    out.innerHTML = '';
+
+    while (true) {
+      var result = await reader.read();
+      if (result.done) break;
+      var lines = decoder.decode(result.value).split('\n');
+      for (var i = 0; i < lines.length; i++) {
+        var line = lines[i].trim();
+        if (!line.startsWith('data:')) continue;
+        var jsonStr = line.slice(5).trim();
+        if (jsonStr === '[DONE]') continue;
+        try {
+          var evt = JSON.parse(jsonStr);
+          if (evt.type === 'content_block_delta' && evt.delta && evt.delta.text) {
+            var chunk = evt.delta.text;
+            fullText += chunk;
+            renderStreamChunk(out, fullText);
+          }
+        } catch(e) {}
+      }
+    }
+
+    // Done
+    document.getElementById('agent-status-pill').textContent = 'Completado';
+    document.getElementById('agent-status-pill').className = 'arc-status status-done';
+    btn.disabled = false;
+    btn.textContent = '▶ Ejecutar Agente';
+
+    // Parse alerts from output and update dashboard
+    parseAndUpdateAlerts(fullText);
+    if (document.getElementById('agent-type').value === 'reporte_semanal') {
+      updateWeeklyReport(fullText);
+    }
+    showToast('✅', 'Análisis completado', 'El agente terminó de procesar los datos');
+
+  } catch(e) {
+    out.innerHTML = '<span style="color:#f08080">Error: ' + e.message + '</span>';
+    document.getElementById('agent-status-pill').textContent = 'Error';
+    document.getElementById('agent-status-pill').className = 'arc-status';
+    btn.disabled = false;
+    btn.textContent = '▶ Ejecutar Agente';
+    showToast('❌', 'Error en el agente', e.message);
+  }
+}
+
+function renderStreamChunk(container, text) {
+  var html = '';
+  var lines = text.split('\n');
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i];
+    if (line.match(/^\[SECCIÓN:/i) || line.match(/^===|^---/)) {
+      html += '<span class="stream-section">' + escHtml(line) + '</span>';
+    } else if (line.match(/\[ALERTA CRÍTICA\]/i) || line.match(/crítico|crítica/i)) {
+      html += '<span class="stream-alert-line">' + escHtml(line) + '</span>\n';
+    } else if (line.match(/\[OK\]/i)) {
+      html += '<span class="stream-ok-line">' + escHtml(line) + '</span>\n';
+    } else if (line.match(/\[ACCIÓN\]|\[ALERTA/i)) {
+      html += '<span class="stream-info-line">' + escHtml(line) + '</span>\n';
+    } else {
+      html += escHtml(line) + '\n';
+    }
+  }
+  html += '<span class="stream-cursor"></span>';
+  container.innerHTML = html;
+  container.scrollTop = container.scrollHeight;
+}
+
+function escHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function parseAndUpdateAlerts(text) {
+  var critCount = (text.match(/\[ALERTA CRÍTICA\]/gi) || []).length;
+  var medCount  = (text.match(/\[ALERTA MEDIA\]/gi) || []).length;
+  if (critCount > 0 || medCount > 0) {
+    alertCount += critCount + medCount;
+    document.getElementById('alert-count-badge').textContent = alertCount;
+    document.getElementById('total-alerts-kpi').textContent = alertCount;
+    document.getElementById('alerts-count-txt').textContent = alertCount + ' sin leer';
+  }
+}
+
+function updateWeeklyReport(text) {
+  var summaryEl = document.getElementById('rep-ai-summary');
+  if (summaryEl) {
+    var clean = text.replace(/\[SECCIÓN:[^\]]*\]/gi,'').replace(/\[ALERTA[^\]]*\]/gi,'').replace(/\[OK\]/gi,'').replace(/\[ACCIÓN\]/gi,'').replace(/===.*===/g,'').replace(/---/g,'').trim();
+    summaryEl.textContent = clean.substring(0, 600) + (clean.length > 600 ? '...' : '');
+  }
+}
+
+function clearStream() {
+  var out = document.getElementById('stream-output');
+  out.classList.remove('show');
+  out.innerHTML = '';
+  document.getElementById('agent-status-pill').textContent = 'Listo';
+  document.getElementById('agent-status-pill').className = 'arc-status status-ready';
+}
+
+// ══ GENERATE WEEKLY REPORT (from config panel) ══
+async function generateWeeklyReport() {
+  var apiKey = document.getElementById('api-key').value.trim() || config.apiKey;
+  if (!apiKey) {
+    showToast('⚙️','API Key requerida','Configura tu API Key primero');
+    return;
+  }
+  document.getElementById('rep-ai-summary').textContent = 'Generando síntesis con IA...';
+  try {
+    var resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model: config.model || 'claude-sonnet-4-20250514',
+        max_tokens: 500,
+        messages:[{role:'user',content:'Genera una síntesis ejecutiva de 4-5 oraciones para el reporte semanal de ObraDocs. Datos: 4 proyectos activos (2 con alertas - Resi Bosques desviación crítica +8.2%, Torre Cumbres desviación +4.2%), 3 deals de ventas inactivos $112K ARR en riesgo, absorción de corretaje 72% del plan. Sé directo y accionable. Responde solo la síntesis, sin título.'}]
+      })
+    });
+    var data = await resp.json();
+    document.getElementById('rep-ai-summary').textContent = data.content[0].text;
+    showToast('📋','Reporte actualizado','Síntesis generada por el agente');
+  } catch(e) {
+    document.getElementById('rep-ai-summary').textContent = 'Error al generar: ' + e.message;
+  }
+}
+
+// ══ ALERTS ══
+function dismissAlert(id) {
+  var el = document.getElementById('alert-' + id);
+  if (!el) return;
+  el.style.opacity = '0';
+  el.style.transform = 'translateX(20px)';
+  el.style.transition = 'all .3s';
+  setTimeout(function(){
+    el.remove();
+    alertCount = Math.max(0, alertCount - 1);
+    document.getElementById('alert-count-badge').textContent = alertCount;
+    document.getElementById('total-alerts-kpi').textContent = alertCount;
+    document.getElementById('alerts-count-txt').textContent = alertCount + ' sin leer';
+    showToast('✓', 'Alerta resuelta', 'Marcada como atendida');
+  }, 300);
+}
+
+function sendAlert(id, channel) {
+  var alertTitles = {
+    1:'🚨 Resi. Bosques — Desviación crítica +8.2%',
+    2:'⚠️ Torre Cumbres — Pago adelantado sin avance',
+    3:'📊 3 Deals sin actividad — $112K ARR en riesgo'
+  };
+  var title = alertTitles[id] || 'Alerta de ObraDocs';
+  var dest = channel === 'wa' ? (config.waPhone || '+52 664 XXX XXXX') : (config.emailDest || 'director@empresa.com');
+  var name = config.contactName || 'Director';
+
+  document.getElementById('modal-title').textContent = channel === 'wa' ? '📱 Enviando por WhatsApp' : '✉️ Enviando por Email';
+  document.getElementById('modal-sub').textContent = 'Notificando a ' + name;
+
+  var channelsHtml = '';
+  if (channel === 'wa') {
+    channelsHtml += '<div class="channel-card"><div class="channel-icon">📱</div><div><div class="channel-name">WhatsApp Business</div><div class="channel-dest">' + dest + '</div></div><div class="channel-status cs-sent">Enviado</div></div>';
+    channelsHtml += '<div class="channel-card" style="opacity:.4"><div class="channel-icon">✉️</div><div><div class="channel-name">Email</div><div class="channel-dest">' + (config.emailDest||'No configurado') + '</div></div><div class="channel-status cs-pending">No enviado</div></div>';
+  } else {
+    channelsHtml += '<div class="channel-card" style="opacity:.4"><div class="channel-icon">📱</div><div><div class="channel-name">WhatsApp</div><div class="channel-dest">' + (config.waPhone||'No configurado') + '</div></div><div class="channel-status cs-pending">No enviado</div></div>';
+    channelsHtml += '<div class="channel-card"><div class="channel-icon">✉️</div><div><div class="channel-name">Email</div><div class="channel-dest">' + dest + '</div></div><div class="channel-status cs-sent">Enviado</div></div>';
+  }
+  channelsHtml += '<div class="channel-card"><div class="channel-icon">🔔</div><div><div class="channel-name">Dashboard</div><div class="channel-dest">Visible en panel de alertas</div></div><div class="channel-status cs-sent">Activo</div></div>';
+  channelsHtml += '<div style="margin-top:14px;padding:12px;background:#0a0806;border-radius:8px;font-size:.78rem;color:#9e8870;line-height:1.6;"><strong style="color:#d9a882;">Mensaje enviado:</strong><br>' + title + '<br><small style="color:#5a4030;">ObraDocs Agente · ' + new Date().toLocaleString('es-MX') + '</small></div>';
+
+  document.getElementById('modal-channels').innerHTML = channelsHtml;
+  document.getElementById('notif-modal').classList.add('show');
+  showToast(channel === 'wa' ? '📱' : '✉️', 'Alerta enviada', 'Notificado a ' + name);
+}
+
+function closeModal() {
+  document.getElementById('notif-modal').classList.remove('show');
+}
+
+// ══ TOASTS ══
+function showToast(icon, title, body) {
+  var container = document.getElementById('toast-container');
+  var toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.innerHTML = '<div class="toast-icon">' + icon + '</div><div><div class="toast-title">' + title + '</div><div class="toast-body">' + body + '</div></div>';
+  container.appendChild(toast);
+  setTimeout(function(){
+    toast.classList.add('removing');
+    setTimeout(function(){ if(toast.parentNode) toast.parentNode.removeChild(toast); }, 300);
+  }, 3500);
+}
+
+// Close modal on overlay click
+document.getElementById('notif-modal').addEventListener('click', function(e){
+  if (e.target === this) closeModal();
+});
+</script>
+</body>
+</html>
