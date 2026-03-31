@@ -21,6 +21,46 @@ DEFAULT_THRESHOLDS = {
     "thr_retraso": 10,     # schedule delay in days → alert
 }
 
+JSON_SCHEMA = """{
+  "proyectos": [
+    {
+      "nombre": "nombre del proyecto",
+      "estado": "Normal|En Riesgo|Crítico",
+      "kpis": {
+        "avance_fisico": "XX%",
+        "avance_financiero": "XX%",
+        "desviacion_curvas": "XX%",
+        "cpi": número,
+        "spi": número,
+        "costo_m2_real": número,
+        "costo_m2_presupuesto": número,
+        "desviacion_costo": "XX%",
+        "margen_bruto": "XX%",
+        "margen_neto": "XX%",
+        "eac": número,
+        "vac": número,
+        "flujo_periodo": número,
+        "retenciones_pendientes": número,
+        "dias_retraso": número
+      },
+      "alertas": [
+        {
+          "nivel": "CRÍTICA|MEDIA|BAJA",
+          "kpi": "nombre del KPI afectado",
+          "valor_actual": "valor con unidades",
+          "umbral": "umbral configurado",
+          "descripcion": "descripción concisa del problema",
+          "accion": "acción específica recomendada"
+        }
+      ]
+    }
+  ],
+  "resumen_ejecutivo": "2-3 oraciones con el estado general de todos los proyectos",
+  "alertas_criticas_total": número,
+  "alertas_medias_total": número,
+  "proyectos_en_riesgo": ["nombre1", "nombre2"]
+}"""
+
 SYSTEM_PROMPT = """Eres el Agente de Monitoreo de Obra de ObraDocs, experto en control financiero \
 y gestión de proyectos de construcción e inmobiliarios en México, con dominio de Earned Value \
 Management (EVM), análisis de curva S, control presupuestal y KPIs de obra.
@@ -93,7 +133,13 @@ UMBRALES CONFIGURADOS:
 - Días de retraso: >{t['thr_retraso']} días → alerta"""
 
 
-def run(data: str, context: str = "", thresholds: dict = None, stream: bool = True):
+def run(
+    data: str,
+    context: str = "",
+    thresholds: dict = None,
+    stream: bool = True,
+    structured: bool = False,
+):
     """
     Run the construction monitoring agent.
 
@@ -105,12 +151,24 @@ def run(data: str, context: str = "", thresholds: dict = None, stream: bool = Tr
               fecha inicio, fecha programada de terminación.
         context: Optional additional context for the analysis.
         thresholds: Optional dict to override default alert thresholds.
-        stream: If True, stream output to stdout. If False, return full text.
+        stream: If True, stream output to stdout (ignored when structured=True).
+        structured: If True, return a parsed JSON dict instead of free text.
 
     Returns:
-        Full response text (when stream=False), or None (when stream=True).
+        - structured=True  → dict with projects, alerts, and executive summary.
+        - structured=False, stream=False → full text string.
+        - structured=False, stream=True → None (output printed to stdout).
     """
+    import json
+
     client = anthropic.Anthropic()
+
+    system = build_system_prompt(thresholds)
+    if structured:
+        system += (
+            "\n\nIMPORTANTE: Responde ÚNICAMENTE con un objeto JSON válido usando exactamente "
+            "el siguiente esquema, sin backticks ni texto adicional:\n" + JSON_SCHEMA
+        )
 
     user_prompt = ""
     if context:
@@ -123,11 +181,25 @@ def run(data: str, context: str = "", thresholds: dict = None, stream: bool = Tr
         "márgenes, retenciones y recomendaciones accionables priorizadas."
     )
 
+    if structured:
+        message = client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=3000,
+            system=system,
+            messages=[{"role": "user", "content": user_prompt}],
+        )
+        raw = message.content[0].text.strip()
+        raw = raw.removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+        try:
+            return json.loads(raw)
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"Agent returned invalid JSON: {exc}\n\nRaw:\n{raw}") from exc
+
     if stream:
         with client.messages.stream(
             model="claude-sonnet-4-20250514",
             max_tokens=2000,
-            system=build_system_prompt(thresholds),
+            system=system,
             messages=[{"role": "user", "content": user_prompt}],
         ) as s:
             for text in s.text_stream:
@@ -138,7 +210,7 @@ def run(data: str, context: str = "", thresholds: dict = None, stream: bool = Tr
         message = client.messages.create(
             model="claude-sonnet-4-20250514",
             max_tokens=2000,
-            system=build_system_prompt(thresholds),
+            system=system,
             messages=[{"role": "user", "content": user_prompt}],
         )
         return message.content[0].text
