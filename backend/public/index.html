@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DocuFin — Inteligencia Financiera</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --t9:#1a100a;--t8:#2d1c12;--t7:#4a2e1e;--t6:#6b4228;--t5:#8b5635;
+  --t4:#a96a42;--t3:#c4845a;--t2:#d9a882;--t1:#ecd3bb;--t0:#faf3eb;
+  --bg:#0f0f0f;--card:#1a1410;--border:#2d1c12;--border2:#4a2e1e;
+  --text:#e8e0d8;--muted:#9e8870;--white:#fff;
+  --green:#2d9e62;--green-bg:rgba(45,158,98,.15);--green-t:#3dc47c;
+  --red:#c43232;--red-bg:rgba(196,50,50,.15);--red-t:#f08080;
+  --yellow:#c49a1a;--yellow-bg:rgba(196,154,26,.15);--yellow-t:#f0c060;
+  --blue:#3a6eb5;--blue-bg:rgba(58,110,181,.15);--blue-t:#7ab4f5;
+  --rad:10px;--rad-lg:16px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+/* TOPBAR */
+.topbar{background:var(--card);border-bottom:1px solid var(--border);height:60px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;position:sticky;top:0;z-index:200;}
+.topbar-logo{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:900;color:var(--t1);}
+.topbar-logo span{color:var(--t3);}
+.topbar-right{display:flex;align-items:center;gap:12px;}
+.status-pill{font-size:.72rem;font-weight:600;padding:5px 12px;border-radius:20px;display:flex;align-items:center;gap:6px;background:var(--green-bg);color:var(--green-t);border:1px solid rgba(45,158,98,.3);}
+.status-dot{width:7px;height:7px;border-radius:50%;background:var(--green-t);animation:blink 1.5s infinite;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.3;}}
+
+/* LAYOUT */
+.app{max-width:900px;margin:0 auto;padding:40px 20px 80px;}
+
+/* WELCOME SCREEN */
+.welcome{text-align:center;padding:60px 20px;}
+.welcome h1{font-family:'Playfair Display',serif;font-size:2.6rem;font-weight:900;color:var(--t1);margin-bottom:8px;}
+.welcome h1 em{color:var(--t3);font-style:normal;}
+.welcome p{color:var(--muted);font-size:1.05rem;margin-bottom:40px;line-height:1.6;}
+
+.mode-cards{display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:700px;margin:0 auto;}
+.mode-card{background:var(--card);border:2px solid var(--border);border-radius:var(--rad-lg);padding:32px 24px;cursor:pointer;transition:all .2s;text-align:left;}
+.mode-card:hover{border-color:var(--t4);transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,0,0,.4);}
+.mode-card .icon{font-size:2.2rem;margin-bottom:14px;}
+.mode-card h3{font-size:1.1rem;font-weight:700;color:var(--t1);margin-bottom:8px;}
+.mode-card p{font-size:.85rem;color:var(--muted);line-height:1.5;}
+
+/* UPLOAD ZONE */
+.upload-zone{border:2px dashed var(--border2);border-radius:var(--rad-lg);padding:50px;text-align:center;cursor:pointer;transition:all .2s;background:var(--card);margin-bottom:20px;}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--t4);background:#1f1510;}
+.upload-zone .icon{font-size:3rem;margin-bottom:12px;}
+.upload-zone h3{color:var(--t1);margin-bottom:6px;}
+.upload-zone p{color:var(--muted);font-size:.85rem;}
+.upload-zone input{display:none;}
+
+.file-info{background:var(--card);border:1px solid var(--border);border-radius:var(--rad);padding:14px 18px;display:flex;align-items:center;gap:12px;margin-bottom:16px;}
+.file-info .name{flex:1;font-weight:500;color:var(--t1);}
+.file-info .size{color:var(--muted);font-size:.82rem;}
+.file-info .remove{cursor:pointer;color:var(--red-t);font-size:1.1rem;}
+
+/* CHAT */
+.chat-container{display:flex;flex-direction:column;height:calc(100vh - 140px);}
+.chat-messages{flex:1;overflow-y:auto;padding:20px 0;display:flex;flex-direction:column;gap:16px;}
+.msg{max-width:85%;padding:14px 18px;border-radius:var(--rad-lg);font-size:.92rem;line-height:1.6;}
+.msg.assistant{background:var(--card);border:1px solid var(--border);align-self:flex-start;color:var(--text);}
+.msg.user{background:var(--t7);align-self:flex-end;color:var(--t0);}
+.msg.system{background:var(--blue-bg);border:1px solid rgba(58,110,181,.3);align-self:center;color:var(--blue-t);font-size:.82rem;text-align:center;}
+
+.chat-input-bar{display:flex;gap:10px;padding:16px 0;border-top:1px solid var(--border);}
+.chat-input{flex:1;padding:12px 16px;border-radius:var(--rad);border:1px solid var(--border);background:var(--card);color:var(--text);font-family:'Outfit',sans-serif;font-size:.92rem;outline:none;transition:border-color .15s;}
+.chat-input:focus{border-color:var(--t4);}
+.chat-input::placeholder{color:var(--muted);}
+
+/* BUTTONS */
+.btn{padding:10px 22px;border-radius:var(--rad);font-family:'Outfit',sans-serif;font-size:.88rem;font-weight:600;cursor:pointer;border:none;transition:all .15s;}
+.btn-primary{background:var(--t4);color:var(--white);}
+.btn-primary:hover{background:var(--t3);}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed;}
+.btn-outline{background:transparent;border:1px solid var(--border2);color:var(--t2);}
+.btn-outline:hover{border-color:var(--t4);color:var(--t1);}
+.btn-back{background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:.85rem;padding:6px 0;}
+.btn-back:hover{color:var(--t2);}
+
+/* LOADING */
+.loading{text-align:center;padding:40px;}
+.spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--t4);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.loading p{color:var(--muted);font-size:.9rem;}
+
+/* DASHBOARD */
+.dashboard-header{margin-bottom:24px;}
+.dashboard-header h2{font-family:'Playfair Display',serif;font-size:1.6rem;color:var(--t1);margin-bottom:4px;}
+.dashboard-header p{color:var(--muted);font-size:.88rem;}
+
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;margin-bottom:24px;}
+.kpi-card{background:var(--card);border:1px solid var(--border);border-radius:var(--rad);padding:18px;position:relative;}
+.kpi-card .sem{position:absolute;top:12px;right:12px;width:10px;height:10px;border-radius:50%;}
+.kpi-card .sem.green{background:var(--green-t);}
+.kpi-card .sem.yellow{background:var(--yellow-t);}
+.kpi-card .sem.red{background:var(--red-t);}
+.kpi-card .label{font-size:.75rem;color:var(--muted);font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;}
+.kpi-card .value{font-size:1.4rem;font-weight:700;color:var(--t1);}
+.kpi-card .variation{font-size:.78rem;margin-top:4px;}
+.kpi-card .variation.up{color:var(--green-t);}
+.kpi-card .variation.down{color:var(--red-t);}
+
+.section-title{font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t5);margin:28px 0 14px;display:flex;align-items:center;gap:10px;}
+.section-title::after{content:'';flex:1;height:1px;background:var(--border);}
+
+.alert-card{background:var(--card);border-left:3px solid;border-radius:var(--rad);padding:16px 18px;margin-bottom:10px;}
+.alert-card.critical{border-color:var(--red-t);background:var(--red-bg);}
+.alert-card.warning{border-color:var(--yellow-t);background:var(--yellow-bg);}
+.alert-card.positive{border-color:var(--green-t);background:var(--green-bg);}
+.alert-card h4{font-size:.9rem;font-weight:600;margin-bottom:4px;}
+.alert-card.critical h4{color:var(--red-t);}
+.alert-card.warning h4{color:var(--yellow-t);}
+.alert-card.positive h4{color:var(--green-t);}
+.alert-card p{font-size:.82rem;color:var(--muted);line-height:1.5;margin-bottom:4px;}
+.alert-card .action{font-size:.82rem;color:var(--t2);font-weight:500;}
+
+.rec-list{list-style:none;}
+.rec-list li{background:var(--card);border:1px solid var(--border);border-radius:var(--rad);padding:14px 18px;margin-bottom:8px;font-size:.88rem;color:var(--text);display:flex;gap:10px;align-items:flex-start;}
+.rec-list li .num{color:var(--t4);font-weight:700;min-width:20px;}
+
+.resumen-box{background:var(--card);border:1px solid var(--border);border-radius:var(--rad-lg);padding:24px;margin-bottom:24px;line-height:1.7;color:var(--text);font-size:.92rem;}
+
+.analisis-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:24px;}
+.analisis-card{background:var(--card);border:1px solid var(--border);border-radius:var(--rad);padding:18px;}
+.analisis-card h4{font-size:.82rem;font-weight:600;color:var(--t2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em;}
+.analisis-card p{font-size:.85rem;color:var(--muted);line-height:1.5;}
+
+/* RESPONSIVE */
+@media(max-width:700px){
+  .mode-cards{grid-template-columns:1fr;}
+  .kpi-grid{grid-template-columns:1fr 1fr;}
+  .analisis-grid{grid-template-columns:1fr;}
+  .welcome h1{font-size:1.8rem;}
+  .app{padding:20px 14px 60px;}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-logo">Docu<span>Fin</span></div>
+  <div class="topbar-right">
+    <div class="status-pill"><div class="status-dot"></div> En línea</div>
+  </div>
+</div>
+
+<div class="app" id="app"></div>
+
+<script>
+const API = window.location.origin + '/api';
+let state = {
+  screen: 'welcome',
+  mode: null,
+  sessionId: null,
+  dashboardId: null,
+  businessId: null,
+  file: null,
+  analysis: null,
+  chatMessages: [],
+};
+
+function render() {
+  const app = document.getElementById('app');
+  switch(state.screen) {
+    case 'welcome': app.innerHTML = welcomeScreen(); break;
+    case 'upload': app.innerHTML = uploadScreen(); break;
+    case 'chat': app.innerHTML = chatScreen(); break;
+    case 'loading': app.innerHTML = loadingScreen(); break;
+    case 'dashboard': app.innerHTML = dashboardScreen(); break;
+    default: app.innerHTML = welcomeScreen();
+  }
+  bindEvents();
+}
+
+// ═══════════════════════════════
+// SCREENS
+// ═══════════════════════════════
+
+function welcomeScreen() {
+  return `
+    <div class="welcome">
+      <h1>Hola, soy <em>DocuFin</em> 👋</h1>
+      <p>Tu agente de inteligencia financiera.<br>Puedo ayudarte de dos formas:</p>
+      <div class="mode-cards">
+        <div class="mode-card" data-action="mode-a">
+          <div class="icon">📊</div>
+          <h3>Sube tu Excel</h3>
+          <p>Arrastra tu archivo y en menos de 60 segundos tendrás tu reporte financiero completo con KPIs, alertas y recomendaciones.</p>
+        </div>
+        <div class="mode-card" data-action="mode-b">
+          <div class="icon">💬</div>
+          <h3>Sin Excel</h3>
+          <p>Cuéntame cómo va tu negocio directamente aquí y construyo tu dashboard personalizado en tiempo real. Tú hablas, yo analizo.</p>
+        </div>
+      </div>
+    </div>`;
+}
+
+function uploadScreen() {
+  const fileHtml = state.file
+    ? `<div class="file-info">
+         <div class="name">📄 ${state.file.name}</div>
+         <div class="size">${(state.file.size/1024).toFixed(0)} KB</div>
+         <div class="remove" data-action="remove-file">✕</div>
+       </div>`
+    : '';
+
+  return `
+    <button class="btn-back" data-action="back">← Volver</button>
+    <div style="margin-top:20px;">
+      <h2 style="font-family:'Playfair Display',serif;color:var(--t1);margin-bottom:16px;">Sube tu archivo</h2>
+      <div class="upload-zone" id="dropZone">
+        <div class="icon">📁</div>
+        <h3>Arrastra tu archivo aquí</h3>
+        <p>o haz clic para seleccionar · .xlsx .xls .csv</p>
+        <input type="file" id="fileInput" accept=".xlsx,.xls,.csv,.txt">
+      </div>
+      ${fileHtml}
+      <div style="display:flex;gap:10px;align-items:center;">
+        <input class="chat-input" id="industryInput" placeholder="Industria (opcional: restaurante, retail, construcción...)" style="flex:1;">
+        <button class="btn btn-primary" data-action="analyze" ${!state.file?'disabled':''}>Analizar</button>
+      </div>
+    </div>`;
+}
+
+function chatScreen() {
+  const msgs = state.chatMessages.map(m => `<div class="msg ${m.role}">${formatMsg(m.content)}</div>`).join('');
+  return `
+    <button class="btn-back" data-action="back">← Volver</button>
+    <div class="chat-container" style="margin-top:10px;">
+      <div class="chat-messages" id="chatMessages">${msgs}</div>
+      <div class="chat-input-bar">
+        <input class="chat-input" id="chatInput" placeholder="Escribe tu respuesta..." autofocus>
+        <button class="btn btn-primary" data-action="send-chat" id="sendBtn">Enviar</button>
+      </div>
+    </div>`;
+}
+
+function loadingScreen() {
+  return `
+    <div class="loading">
+      <div class="spinner"></div>
+      <p>Analizando tus datos financieros...</p>
+      <p style="font-size:.78rem;color:var(--border2);margin-top:8px;">Detectando industria, calculando KPIs y generando alertas</p>
+    </div>`;
+}
+
+function dashboardScreen() {
+  const a = state.analysis;
+  if (!a) return '<p>Sin datos</p>';
+
+  let html = '';
+
+  // Back + action bar
+  html += `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+    <button class="btn-back" data-action="back">← Nuevo análisis</button>
+    <button class="btn btn-outline" data-action="open-chat-update">💬 Actualizar con chat</button>
+  </div>`;
+
+  // Header
+  html += `<div class="dashboard-header">
+    <h2>${a.industria_detectada || 'Reporte Financiero'}</h2>
+    <p>${a.periodo || ''} ${a.registros ? '· ' + a.registros + ' registros' : ''}</p>
+  </div>`;
+
+  // Resumen ejecutivo
+  if (a.resumen_ejecutivo) {
+    html += `<div class="resumen-box">${a.resumen_ejecutivo}</div>`;
+  }
+
+  // KPIs
+  if (a.kpis && a.kpis.length) {
+    html += `<div class="section-title">Dashboard de KPIs</div>`;
+    html += `<div class="kpi-grid">`;
+    for (const k of a.kpis) {
+      const sem = k.status || 'green';
+      const varHtml = k.variacion != null
+        ? `<div class="variation ${k.variacion >= 0 ? 'up' : 'down'}">${k.variacion >= 0 ? '▲' : '▼'} ${Math.abs(k.variacion).toFixed(1)}%</div>`
+        : '';
+      html += `<div class="kpi-card">
+        <div class="sem ${sem}"></div>
+        <div class="label">${k.nombre}</div>
+        <div class="value">${k.valor_formateado || k.valor}</div>
+        ${varHtml}
+      </div>`;
+    }
+    html += `</div>`;
+  }
+
+  // Alertas
+  if (a.alertas && a.alertas.length) {
+    html += `<div class="section-title">Alertas y Desviaciones</div>`;
+    for (const al of a.alertas) {
+      const sev = al.severidad || al.severity || 'warning';
+      const icon = sev === 'critical' ? '🔴' : sev === 'warning' ? '🟡' : '🟢';
+      html += `<div class="alert-card ${sev}">
+        <h4>${icon} ${al.titulo || al.title}</h4>
+        <p>${al.descripcion || al.description || ''}</p>
+        ${al.impacto || al.impact ? `<p><strong>Impacto:</strong> ${al.impacto || al.impact}</p>` : ''}
+        ${al.accion || al.action ? `<div class="action">→ ${al.accion || al.action}</div>` : ''}
+      </div>`;
+    }
+  }
+
+  // Análisis por área
+  if (a.analisis_por_area) {
+    const areas = Object.entries(a.analisis_por_area).filter(([,v]) => v && v !== 'N/A' && v !== 'No aplica');
+    if (areas.length) {
+      html += `<div class="section-title">Análisis por Área</div>`;
+      html += `<div class="analisis-grid">`;
+      for (const [area, texto] of areas) {
+        html += `<div class="analisis-card"><h4>${area}</h4><p>${texto}</p></div>`;
+      }
+      html += `</div>`;
+    }
+  }
+
+  // Recomendaciones
+  if (a.recomendaciones && a.recomendaciones.length) {
+    html += `<div class="section-title">Recomendaciones</div>`;
+    html += `<ul class="rec-list">`;
+    for (let i = 0; i < a.recomendaciones.length; i++) {
+      const r = a.recomendaciones[i];
+      html += `<li><span class="num">${i+1}.</span><span>${r.accion || r}${r.impacto_estimado ? `<br><span style="color:var(--muted);font-size:.8rem;">Impacto: ${r.impacto_estimado}</span>` : ''}</span></li>`;
+    }
+    html += `</ul>`;
+  }
+
+  // Próximos pasos
+  if (a.proximos_pasos && a.proximos_pasos.length) {
+    html += `<div class="section-title">Próximos Pasos</div>`;
+    html += `<ul class="rec-list">`;
+    for (const p of a.proximos_pasos) {
+      html += `<li><span class="num">→</span><span>${p}</span></li>`;
+    }
+    html += `</ul>`;
+  }
+
+  return html;
+}
+
+// ═══════════════════════════════
+// EVENTS
+// ═══════════════════════════════
+
+function bindEvents() {
+  // Mode selection
+  document.querySelectorAll('[data-action="mode-a"]').forEach(el =>
+    el.addEventListener('click', () => { state.screen = 'upload'; state.mode = 'A'; render(); }));
+
+  document.querySelectorAll('[data-action="mode-b"]').forEach(el =>
+    el.addEventListener('click', () => startModeB()));
+
+  document.querySelectorAll('[data-action="back"]').forEach(el =>
+    el.addEventListener('click', () => { state.screen = 'welcome'; state.file = null; state.analysis = null; state.chatMessages = []; render(); }));
+
+  // Upload
+  const dropZone = document.getElementById('dropZone');
+  const fileInput = document.getElementById('fileInput');
+  if (dropZone) {
+    dropZone.addEventListener('click', () => fileInput.click());
+    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag'));
+    dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('drag'); handleFile(e.dataTransfer.files[0]); });
+  }
+  if (fileInput) {
+    fileInput.addEventListener('change', e => handleFile(e.target.files[0]));
+  }
+
+  document.querySelectorAll('[data-action="remove-file"]').forEach(el =>
+    el.addEventListener('click', () => { state.file = null; render(); }));
+
+  document.querySelectorAll('[data-action="analyze"]').forEach(el =>
+    el.addEventListener('click', () => analyzeFile()));
+
+  // Chat
+  const chatInput = document.getElementById('chatInput');
+  if (chatInput) {
+    chatInput.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); } });
+  }
+  document.querySelectorAll('[data-action="send-chat"]').forEach(el =>
+    el.addEventListener('click', () => sendChat()));
+
+  document.querySelectorAll('[data-action="open-chat-update"]').forEach(el =>
+    el.addEventListener('click', () => {
+      state.screen = 'chat';
+      state.chatMessages = [{ role: 'assistant', content: 'Tu dashboard está listo. Puedes actualizarlo con lenguaje natural.\n\nEjemplos:\n• "Este mes vendí $240,000"\n• "Contraté 2 empleados más"\n• "¿Cómo voy vs. el mes anterior?"' }];
+      render();
+    }));
+
+  // Scroll chat to bottom
+  const chatMsgs = document.getElementById('chatMessages');
+  if (chatMsgs) chatMsgs.scrollTop = chatMsgs.scrollHeight;
+}
+
+function handleFile(file) {
+  if (!file) return;
+  const ext = file.name.split('.').pop().toLowerCase();
+  if (!['xlsx','xls','csv','txt'].includes(ext)) {
+    alert('Formato no soportado. Usa .xlsx, .xls, .csv o .txt');
+    return;
+  }
+  state.file = file;
+  render();
+}
+
+// ═══════════════════════════════
+// MODE A — Upload + Analyze
+// ═══════════════════════════════
+
+async function analyzeFile() {
+  if (!state.file) return;
+  state.screen = 'loading';
+  render();
+
+  try {
+    const form = new FormData();
+    form.append('file', state.file);
+    const industryInput = document.getElementById('industryInput');
+    if (industryInput && industryInput.value) form.append('industry', industryInput.value);
+
+    const res = await fetch(`${API}/analysis/upload`, { method: 'POST', body: form });
+    const data = await res.json();
+
+    if (!res.ok) throw new Error(data.error || 'Error al analizar');
+
+    state.analysis = data.analysis;
+    state.dashboardId = data.dashboardId;
+    state.businessId = data.businessId;
+
+    // If Claude couldn't parse JSON, show raw
+    if (state.analysis.parse_error) {
+      state.analysis = {
+        resumen_ejecutivo: state.analysis.raw_response,
+        kpis: [], alertas: [], recomendaciones: [], proximos_pasos: [],
+        industria_detectada: data.industry,
+      };
+    }
+
+    state.screen = 'dashboard';
+    render();
+  } catch (err) {
+    alert('Error: ' + err.message);
+    state.screen = 'upload';
+    render();
+  }
+}
+
+// ═══════════════════════════════
+// MODE B — Chat Onboarding
+// ═══════════════════════════════
+
+async function startModeB() {
+  state.mode = 'B';
+  state.screen = 'chat';
+  state.chatMessages = [
+    { role: 'assistant', content: '¡Hola! Soy DocuFin 👋\n\nVoy a ayudarte a construir tu dashboard financiero personalizado sin necesidad de Excel.\n\nPara empezar, cuéntame:\n\n**¿A qué se dedica tu negocio?**' }
+  ];
+  render();
+}
+
+async function sendChat() {
+  const input = document.getElementById('chatInput');
+  if (!input || !input.value.trim()) return;
+
+  const message = input.value.trim();
+  state.chatMessages.push({ role: 'user', content: message });
+  input.value = '';
+  render();
+
+  // Disable send button
+  const btn = document.getElementById('sendBtn');
+  if (btn) btn.disabled = true;
+
+  try {
+    let data;
+
+    if (!state.sessionId && state.mode === 'B') {
+      // First message = industry, start onboarding
+      const res = await fetch(`${API}/onboarding/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ industry: message }),
+      });
+      data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      state.sessionId = data.sessionId;
+      state.businessId = data.businessId;
+
+      const response = data.response;
+      state.chatMessages.push({ role: 'assistant', content: response.mensaje || JSON.stringify(response) });
+
+    } else if (state.sessionId && !state.dashboardId) {
+      // Onboarding in progress
+      const res = await fetch(`${API}/onboarding/${state.sessionId}/answer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message }),
+      });
+      data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      const response = data.response;
+      state.chatMessages.push({ role: 'assistant', content: response.mensaje || JSON.stringify(response) });
+
+      // If onboarding complete, create dashboard
+      if (data.complete && response.datos_financieros) {
+        state.chatMessages.push({ role: 'system', content: '✅ Onboarding completo. Construyendo tu dashboard...' });
+        render();
+
+        const financialData = [];
+        const df = response.datos_financieros;
+        if (df.ingresos) financialData.push({ category: 'ingresos', label: 'Ventas', amount: df.ingresos });
+        if (df.nomina) financialData.push({ category: 'nomina', label: 'Nómina', amount: df.nomina });
+        if (df.deudas) financialData.push({ category: 'deudas', label: 'Deudas', amount: df.deudas });
+        if (df.gastos_principales) {
+          for (const g of df.gastos_principales) {
+            financialData.push({ category: 'gastos', label: g.concepto, amount: g.monto });
+          }
+        }
+
+        const dbRes = await fetch(`${API}/dashboard`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ businessName: 'Mi Negocio', industry: message, financialData }),
+        });
+        const dbData = await dbRes.json();
+        state.dashboardId = dbData.dashboardId;
+
+        state.chatMessages.push({ role: 'assistant', content: '¡Tu dashboard está listo! Ahora puedes actualizarlo con lenguaje natural. Por ejemplo:\n\n• "Este mes vendí $180,000"\n• "Gasté $12,000 más en materiales"\n• "¿Cuánto más necesito vender para cubrir mis costos fijos?"' });
+      }
+
+    } else if (state.dashboardId) {
+      // Dashboard exists — live update via chat
+      const res = await fetch(`${API}/chat/${state.dashboardId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message }),
+      });
+      data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      const response = data.response;
+      let reply = response.mensaje || '';
+
+      // Show KPI changes
+      if (response.kpis_afectados && response.kpis_afectados.length) {
+        reply += '\n\n**KPIs actualizados:**\n';
+        for (const k of response.kpis_afectados) {
+          reply += `• ${k.nombre}: ${k.valor_anterior} → ${k.valor_nuevo} (${k.variacion})\n`;
+        }
+      }
+
+      // Show new alerts
+      if (response.alertas_nuevas && response.alertas_nuevas.length) {
+        reply += '\n\n**Nuevas alertas:**\n';
+        for (const al of response.alertas_nuevas) {
+          const icon = al.severidad === 'critical' ? '🔴' : al.severidad === 'warning' ? '🟡' : '🟢';
+          reply += `${icon} ${al.titulo}\n`;
+        }
+      }
+
+      state.chatMessages.push({ role: 'assistant', content: reply });
+    }
+  } catch (err) {
+    state.chatMessages.push({ role: 'system', content: '⚠️ Error: ' + err.message });
+  }
+
+  render();
+}
+
+// ═══════════════════════════════
+// HELPERS
+// ═══════════════════════════════
+
+function formatMsg(text) {
+  return text
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\n/g, '<br>')
+    .replace(/• /g, '&bull; ');
+}
+
+// Init
+render();
+</script>
+</body>
+</html>
