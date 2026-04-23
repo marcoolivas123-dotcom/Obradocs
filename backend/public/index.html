@@ -415,30 +415,68 @@ function handleFile(file) {
 
 async function analyzeFile() {
   if (!state.file) return;
+
+  // Capture industry BEFORE switching screens (DOM will be replaced)
+  const industryEl = document.getElementById('industryInput');
+  const industryValue = industryEl ? industryEl.value.trim() : '';
+
   state.screen = 'loading';
   render();
 
   try {
+    // First try full analysis with Claude
     const form = new FormData();
     form.append('file', state.file);
-    const industryInput = document.getElementById('industryInput');
-    if (industryInput && industryInput.value) form.append('industry', industryInput.value);
+    if (industryValue) form.append('industry', industryValue);
 
-    const res = await fetch(`${API}/analysis/upload`, { method: 'POST', body: form });
-    const data = await res.json();
+    let data;
+    let usedFallback = false;
 
-    if (!res.ok) throw new Error(data.error || 'Error al analizar');
+    try {
+      const res = await fetch(`${API}/analysis/upload`, { method: 'POST', body: form });
+      data = await res.json();
+      if (!res.ok) throw new Error(data.error || data.details || 'Error en análisis');
+    } catch (apiErr) {
+      // Fallback: use local KPI engine without Claude
+      usedFallback = true;
+      const form2 = new FormData();
+      form2.append('file', state.file);
+      if (industryValue) form2.append('industry', industryValue);
+
+      const res2 = await fetch(`${API}/analysis/quick`, { method: 'POST', body: form2 });
+      data = await res2.json();
+      if (!res2.ok) throw new Error(data.error || 'Error al procesar archivo');
+
+      // Reshape quick response to match dashboard format
+      data.analysis = {
+        resumen_ejecutivo: '⚠️ Análisis generado con el motor local (sin IA). Configura tu API key de Anthropic en el archivo .env del servidor para obtener análisis completo con Claude.',
+        industria_detectada: data.industry || industryValue || 'General',
+        periodo: data.summary?.detectedPeriod,
+        registros: data.summary?.totalRows,
+        kpis: (data.kpis || []).map(k => ({
+          nombre: k.nombre, valor: k.valor, valor_formateado: k.valor_formateado,
+          valor_anterior: k.valor_anterior, variacion: k.variacion,
+          status: k.status, categoria: k.categoria, formula: k.formula,
+        })),
+        alertas: (data.alerts || []).map(a => ({
+          severidad: a.severity, titulo: a.title,
+          descripcion: a.description, impacto: a.impact, accion: a.action,
+        })),
+        recomendaciones: [],
+        proximos_pasos: ['Configura ANTHROPIC_API_KEY en backend/.env para análisis completo con IA'],
+      };
+    }
 
     state.analysis = data.analysis;
-    state.dashboardId = data.dashboardId;
-    state.businessId = data.businessId;
+    state.dashboardId = data.dashboardId || null;
+    state.businessId = data.businessId || null;
 
-    // If Claude couldn't parse JSON, show raw
-    if (state.analysis.parse_error) {
+    // If Claude response couldn't be parsed as JSON, show raw text
+    if (state.analysis && state.analysis.parse_error) {
       state.analysis = {
         resumen_ejecutivo: state.analysis.raw_response,
         kpis: [], alertas: [], recomendaciones: [], proximos_pasos: [],
-        industria_detectada: data.industry,
+        industria_detectada: data.industry || 'General',
       };
     }
 

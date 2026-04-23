@@ -17,6 +17,13 @@ router.post('/upload', upload.single('file'), async (req, res) => {
       return res.status(400).json({ error: 'No se recibió ningún archivo' });
     }
 
+    if (!process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY === 'placeholder') {
+      return res.status(503).json({
+        error: 'API key de Anthropic no configurada. Edita backend/.env con tu clave real.',
+        details: 'ANTHROPIC_API_KEY no está configurada en el servidor',
+      });
+    }
+
     const filePath = req.file.path;
     const industryHint = req.body.industry || null;
 
@@ -148,8 +155,10 @@ router.post('/quick', upload.single('file'), (req, res) => {
     const parsed = parseFile(req.file.path);
     const industry = req.body.industry || 'general';
 
-    // Use local KPI calculator
-    const kpis = calculateKpis(parsed.sheets[0]?.data || [], industry);
+    // Map Excel rows to financial data structure
+    const financialData = mapExcelToFinancialData(parsed);
+
+    const kpis = calculateKpis(financialData, industry);
     const alerts = generateAlerts(kpis, industry);
 
     fs.unlink(req.file.path, () => {});
@@ -166,5 +175,67 @@ router.post('/quick', upload.single('file'), (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+/**
+ * Auto-map Excel data to financial structure.
+ * Handles two common formats:
+ *   Format 1 (columns): headers are financial categories (Ingresos, Costos, etc.)
+ *   Format 2 (rows): a label column + numeric period columns (Enero, Febrero, etc.)
+ */
+function mapExcelToFinancialData(parsed) {
+  const data = { ingresos: 0, costo_ventas: 0, gastos_operativos: 0, gastos_admin: 0, nomina: 0, deudas: 0, inventario: 0, efectivo: 0 };
+
+  for (const sheet of parsed.sheets) {
+    const summary = sheet.numericSummary || {};
+    const headers = sheet.headers || [];
+    const rows = sheet.data || [];
+
+    // Detect if data is row-based (first column is text labels, rest are numeric periods)
+    const firstColType = sheet.columnTypes?.[headers[0]];
+    const numericCols = headers.filter(h => ['numeric', 'currency'].includes(sheet.columnTypes?.[h]));
+    const isRowBased = firstColType === 'text' && numericCols.length >= 1 && headers.length >= 2;
+
+    if (isRowBased) {
+      // Format 2: each row is a category, sum across period columns
+      const labelCol = headers[0];
+      for (const row of rows) {
+        const label = String(row[labelCol] || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+        let rowSum = 0;
+        for (const col of numericCols) {
+          const val = parseFloat(String(row[col]).replace(/[$,]/g, ''));
+          if (!isNaN(val)) rowSum += val;
+        }
+        if (rowSum === 0) continue;
+
+        if (/costo.*venta|cost.*good|cogs|costo.*direc/.test(label)) data.costo_ventas += rowSum;
+        else if (/nomin|salar|sueldo|payroll/.test(label)) data.nomina += rowSum;
+        else if (/gasto.*admin|admin/.test(label)) data.gastos_admin += rowSum;
+        else if (/gasto|expense|egreso|compra|renta|servicio/.test(label)) data.gastos_operativos += rowSum;
+        else if (/ingreso|venta|revenue|factur/.test(label)) data.ingresos += rowSum;
+        else if (/deuda|credito|prestamo/.test(label)) data.deudas += rowSum;
+        else if (/inventario|stock/.test(label)) data.inventario += rowSum;
+        else if (/efectivo|cash|banco/.test(label)) data.efectivo += rowSum;
+      }
+    } else {
+      // Format 1: headers are the financial categories
+      for (const header of headers) {
+        const h = header.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+        const total = summary[header]?.sum || 0;
+        if (total === 0) continue;
+
+        if (/costo.*venta|cost.*good|cogs|costo.*direc/.test(h)) data.costo_ventas += total;
+        else if (/nomin|salar|sueldo|payroll|empleado/.test(h)) data.nomina += total;
+        else if (/gasto.*admin|admin|indirect/.test(h)) data.gastos_admin += total;
+        else if (/gasto|expense|egreso|compra/.test(h)) data.gastos_operativos += total;
+        else if (/ingreso|venta|revenue|factur|cobr/.test(h)) data.ingresos += total;
+        else if (/deuda|credito|prestamo|loan/.test(h)) data.deudas += total;
+        else if (/inventario|stock|almacen/.test(h)) data.inventario += total;
+        else if (/efectivo|cash|banco|saldo/.test(h)) data.efectivo += total;
+      }
+    }
+  }
+
+  return data;
+}
 
 module.exports = router;
